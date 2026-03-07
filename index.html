@@ -88,6 +88,26 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
 @keyframes flash{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 #e3b34144}50%{box-shadow:0 0 0 6px transparent}}
 .pulsing{animation:pulse 1.5s infinite}
+
+/* POKA-YOKE PANEL */
+#poka-panel{grid-column:1/-1;background:#010409;border-top:1px solid #21262d;padding:10px 16px;display:none;gap:12px;align-items:flex-start;flex-shrink:0}
+#poka-panel.show{display:flex}
+.poka-steps{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.pstep{padding:6px 12px;border-radius:6px;border:1px solid #21262d;font-size:10px;display:flex;align-items:center;gap:6px;background:#080c11}
+.pstep.done{border-color:#56d364;background:#56d36411;color:#56d364}
+.pstep.active{border-color:#e3b341;background:#e3b34111;color:#e3b341;animation:pulse 1.2s infinite}
+.pstep.pending{color:#484f58}
+.pstep.error{border-color:#f85149;background:#f8514911;color:#f85149}
+.step-num{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.poka-info{min-width:200px;padding:10px;background:#080c11;border-radius:6px;border:1px solid #21262d}
+.poka-info h4{font-size:9px;color:#e3b341;letter-spacing:1px;margin-bottom:6px}
+#poka-current{font-size:11px;color:#f0f6fc;line-height:1.5}
+#poka-errors{font-size:10px;color:#f85149;margin-top:6px}
+
+/* HUMAN ERROR COUNTER */
+.error-counter{display:flex;flex-direction:column;align-items:center;padding:10px 14px;background:#080c11;border-radius:6px;border:1px solid #21262d}
+.error-counter .enum{font-size:26px;font-weight:700;color:#56d364;line-height:1}
+.error-counter .elbl{font-size:9px;color:#484f58;letter-spacing:1px;margin-top:3px}
 </style>
 </head>
 <body>
@@ -244,6 +264,33 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
 </div>
 
 <!-- CONTROLS -->
+
+<!-- POKA-YOKE RECOVERY CHECKLIST (UR10e Manual Procedure) -->
+<div id="poka-panel">
+  <div style="flex-shrink:0">
+    <div style="font-size:9px;color:#e3b341;letter-spacing:2px;margin-bottom:8px">📋 UR10e MANUAL — RECOVERY CHECKLIST</div>
+    <div class="poka-steps" id="poka-steps">
+      <div class="pstep pending" id="ps0"><div class="step-num" style="background:#21262d">1</div>Workspace Clear</div>
+      <div class="pstep pending" id="ps1"><div class="step-num" style="background:#21262d">2</div>Inspect Joint</div>
+      <div class="pstep pending" id="ps2"><div class="step-num" style="background:#21262d">3</div>Check Payload/TCP</div>
+      <div class="pstep pending" id="ps3"><div class="step-num" style="background:#21262d">4</div>Review Fault Log</div>
+      <div class="pstep pending" id="ps4"><div class="step-num" style="background:#21262d">5</div>Clear Hazard</div>
+    </div>
+  </div>
+  <div class="poka-info">
+    <h4>CURRENT STEP</h4>
+    <div id="poka-current">Waiting for technician authentication...</div>
+    <div id="poka-errors"></div>
+  </div>
+  <div class="error-counter">
+    <div class="enum" id="err-count" style="color:#56d364">0</div>
+    <div class="elbl">HUMAN ERRORS</div>
+  </div>
+  <div class="error-counter" style="margin-left:0">
+    <div class="enum" id="skip-count" style="color:#56d364">0</div>
+    <div class="elbl">SKIPS/WRONG</div>
+  </div>
+</div>
 <div id="controls">
   <span>LOAD:</span>
   <input type="range" id="vslider" min="0" max="100" value="50" oninput="setLoad(this.value)"/>
@@ -586,6 +633,158 @@ function loop(){
   requestAnimationFrame(loop);
 }
 loop();
+
+// ── POKA-YOKE STATE ───────────────────────────────────────────
+const STEPS = [
+  { label:'Workspace Clear',   desc:'Confirm all operators are outside the robot workspace. No obstacles in joint path.',            key:'1' },
+  { label:'Inspect Joint',     desc:'Visually inspect elbow joint — no cracks, loose bolts, or debris. Check for heat damage.',     key:'2' },
+  { label:'Check Payload/TCP', desc:'Verify Tool Center Point and payload settings match installation. Incorrect TCP = repeat fault.','key':'3' },
+  { label:'Review Fault Log',  desc:'Read the fault log. Identify ROOT CAUSE before reset. Never auto-acknowledge a protective stop.', key:'4' },
+  { label:'Clear Hazard',      desc:'Confirm the cause is resolved — not just acknowledged. Resetting without fixing = human error.', key:'5' },
+];
+let pokaStep = -1;  // -1 = not started
+let pokaErrors = 0;
+let pokaSkips = 0;
+let pokaActive = false;
+
+function startPokaYoke() {
+  pokaStep = 0;
+  pokaErrors = 0;
+  pokaSkips = 0;
+  pokaActive = true;
+  document.getElementById('poka-panel').classList.add('show');
+  // Reset all steps to pending
+  STEPS.forEach((_,i) => {
+    const el = document.getElementById('ps'+i);
+    el.className = 'pstep ' + (i===0 ? 'active' : 'pending');
+    el.querySelector('.step-num').style.background = i===0 ? '#e3b341' : '#21262d';
+  });
+  updatePokaDisplay();
+}
+
+function updatePokaDisplay() {
+  if(pokaStep >= STEPS.length) return;
+  const s = STEPS[pokaStep];
+  document.getElementById('poka-current').innerHTML =
+    `<b style="color:#e3b341">Step ${pokaStep+1}/5: ${s.label}</b><br>
+     <span style="color:#8b949e;font-size:10px">${s.desc}</span><br>
+     <span style="color:#58a6ff;margin-top:4px;display:block">Press <b>${s.key}</b> to confirm ↵</span>`;
+  document.getElementById('err-count').textContent = pokaErrors;
+  document.getElementById('skip-count').textContent = pokaSkips;
+  const errEl = document.getElementById('poka-errors');
+  if(pokaErrors > 0 || pokaSkips > 0) {
+    errEl.innerHTML = `⚠ ${pokaErrors} error(s) — ${pokaSkips} skip attempt(s) logged`;
+    errEl.style.color = pokaErrors > 2 ? '#f85149' : '#e3b341';
+  }
+}
+
+function confirmPokaStep(key) {
+  if(!pokaActive || pokaStep >= STEPS.length) return;
+  const expected = STEPS[pokaStep].key;
+
+  if(key === expected) {
+    // Mark current step done
+    const el = document.getElementById('ps'+pokaStep);
+    el.className = 'pstep done';
+    el.querySelector('.step-num').style.background = '#56d364';
+    pokaStep++;
+
+    if(pokaStep >= STEPS.length) {
+      // All done — allow reset
+      document.getElementById('poka-current').innerHTML =
+        '<b style="color:#56d364">✅ ALL STEPS VERIFIED</b><br>' +
+        '<span style="color:#8b949e">Joint cleared for reset.<br>' +
+        `${pokaErrors} human error(s) logged this incident.</span>`;
+      document.getElementById('mfa-msg').textContent = '✅ Poka-Yoke complete. Resetting joint...';
+      document.getElementById('mfa-msg').style.color = '#56d364';
+      const ts = new Date().toLocaleTimeString();
+      faults.unshift(ts+' — Reset OK · '+pokaErrors+' errors logged');
+      renderLog();
+      pokaActive = false;
+      setTimeout(() => { restoreJoint(); document.getElementById('poka-panel').classList.remove('show'); }, 2000);
+    } else {
+      // Advance to next step
+      const next = document.getElementById('ps'+pokaStep);
+      next.className = 'pstep active';
+      next.querySelector('.step-num').style.background = '#e3b341';
+      updatePokaDisplay();
+    }
+
+  } else if(key === '*') {
+    // Attempted skip
+    pokaSkips++;
+    pokaErrors++;
+    document.getElementById('ps'+pokaStep).classList.add('error');
+    setTimeout(() => {
+      document.getElementById('ps'+pokaStep).className='pstep active';
+      document.getElementById('ps'+pokaStep).querySelector('.step-num').style.background='#e3b341';
+    }, 800);
+    document.getElementById('poka-errors').textContent = '🚫 CANNOT SKIP — step ' + (pokaStep+1) + ' is mandatory';
+    document.getElementById('poka-errors').style.color = '#f85149';
+    const ts = new Date().toLocaleTimeString();
+    faults.unshift(ts+' — ⚠ Human error: tried to skip step '+(pokaStep+1));
+    renderLog(); updatePokaDisplay();
+  } else {
+    // Wrong key
+    pokaErrors++;
+    document.getElementById('ps'+pokaStep).classList.add('error');
+    setTimeout(() => {
+      document.getElementById('ps'+pokaStep).className='pstep active';
+    }, 800);
+    updatePokaDisplay();
+  }
+}
+
+// Allow keyboard for demo — number keys confirm steps
+document.addEventListener('keydown', e => {
+  if(pokaActive && e.key >= '1' && e.key <= '5') { confirmPokaStep(e.key); return; }
+  if(pokaActive && e.key === '*') { confirmPokaStep('*'); return; }
+  // Existing PIN handler
+  if(authState!=='AWAIT_PIN') return;
+  if(e.key>='0'&&e.key<='9'&&pin.length<4) pin+=e.key;
+  if(e.key==='Backspace') pin=pin.slice(0,-1);
+  if(e.key==='Enter'){
+    const correct=currentCard==='B'?'1234':'9999';
+    const ts=new Date().toLocaleTimeString();
+    if(pin===correct){
+      document.getElementById('mfa-msg').textContent='✓ PIN verified — Starting safety checklist...';
+      document.getElementById('mfa-msg').style.color='#56d364';
+      faults.unshift(ts+' — Auth OK by Card '+currentCard);
+      renderLog();
+      authState='POKA';
+      setTimeout(() => startPokaYoke(), 1000);
+    } else {
+      document.getElementById('mfa-msg').textContent='❌ Wrong PIN — try again';
+      document.getElementById('mfa-msg').style.color='#f85149';
+      pin='';
+    }
+  }
+  if(authState==='AWAIT_PIN')
+    document.getElementById('mfa-msg').textContent=
+      `Factor 1 ✓ | PIN: ${'●'.repeat(pin.length).padEnd(4,'_')} (Enter to confirm)`;
+});
+
+// Update autoDemo to go through poka-yoke too
+function autoDemo(){
+  if(demoRunning) return; demoRunning=true; hardReset();
+  const steps=[
+    [0,    ()=>setLoad(50)],
+    [1500, ()=>{ document.getElementById('vslider').value=70; setLoad(70); }],  // amber
+    [3500, ()=>{ document.getElementById('vslider').value=85; setLoad(85); }],  // FAULT
+    [5500, ()=>scanCard('A')],   // denied
+    [7500, ()=>scanCard('B')],   // factor 1
+    [9500, ()=>{ authState='AWAIT_PIN'; pin='1234'; document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter'})); }],
+    // Poka-Yoke steps auto-confirm
+    [11500,()=>confirmPokaStep('1')],
+    [12500,()=>confirmPokaStep('2')],
+    [13500,()=>confirmPokaStep('3')],
+    [14500,()=>confirmPokaStep('4')],
+    [15500,()=>confirmPokaStep('5')],
+    [18000,()=>{ demoRunning=false; }],
+  ];
+  steps.forEach(([t,fn])=>setTimeout(fn,t));
+}
+
 </script>
 </body>
 </html>
