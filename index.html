@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Power-Shift Redundancy Matrix</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height:100vh;display:flex;flex-direction:column}
+#header{padding:16px 24px;border-bottom:1px solid #21262d;display:flex;align-items:center;gap:16px}
+#header h1{font-size:18px;color:#f0f6fc;letter-spacing:2px}
+#header .subtitle{font-size:11px;color:#484f58}
+#demo-badge{margin-left:auto;background:#1f6feb22;border:1px solid #1f6feb;color:#79c0ff;padding:4px 12px;border-radius:12px;font-size:11px}
+#main{flex:1;display:grid;grid-template-columns:220px 1fr 220px;grid-template-rows:1fr auto;gap:1px;background:#21262d;overflow:hidden}
+.panel{background:#0d1117;padding:20px}
+
+/* GAUGE */
+#gauge-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#gauge-wrap{position:relative;width:180px;height:180px}
+#gauge-svg{width:180px;height:180px}
+#gauge-value{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+#gauge-v{font-size:32px;font-weight:700;color:#00d264}
+#gauge-label{font-size:10px;color:#484f58;letter-spacing:1px}
+.zone-labels{display:flex;justify-content:space-between;width:180px;font-size:9px;color:#484f58}
+
+/* WAVEFORM */
+#wave-panel{display:flex;flex-direction:column}
+#wave-panel h3{font-size:11px;color:#484f58;letter-spacing:1px;margin-bottom:8px}
+#wave-canvas{flex:1;width:100%;background:#080c11;border-radius:6px}
+.thresholds{display:flex;gap:16px;margin-top:6px;font-size:10px}
+.t-surge{color:#f85149}.t-normal{color:#56d364}.t-brown{color:#e3b341}
+
+/* STATUS */
+#status-panel{display:flex;flex-direction:column;gap:12px}
+.status-box{border-radius:8px;padding:14px;border:1px solid #21262d}
+.status-box h4{font-size:10px;letter-spacing:1px;margin-bottom:8px}
+.status-box .val{font-size:16px;font-weight:700}
+#sys-status{border-color:#56d364;background:#56d36411}
+#relay-box{display:flex;flex-direction:column;gap:8px}
+.relay-diagram{display:flex;align-items:center;gap:4px;padding:10px;background:#080c11;border-radius:6px}
+.wire{height:3px;flex:1;background:#56d364;border-radius:2px}
+.switch-open{width:24px;height:24px;border:3px solid #f85149;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#f85149}
+.switch-closed{width:24px;height:3px;background:#56d364;border-radius:2px}
+.motor{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+
+/* CONTROLS */
+#controls{grid-column:1/-1;background:#010409;border-top:1px solid #21262d;padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#controls span{font-size:10px;color:#484f58}
+button{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;font-family:monospace}
+button:hover{background:#21262d}
+#volt-slider{flex:1;max-width:300px;accent-color:#58a6ff}
+#volt-display{font-size:13px;color:#58a6ff;min-width:60px}
+
+/* Fault flash */
+@keyframes flash{0%,100%{opacity:1}50%{opacity:0.3}}
+.flashing{animation:flash 0.6s infinite}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <h1>⚡ POWER-SHIFT REDUNDANCY MATRIX</h1>
+    <div class="subtitle">INDUSTRIAL GRID FAULT DETECTION — REAL-TIME MONITOR</div>
+  </div>
+  <div id="demo-badge">● SIMULATION MODE</div>
+</div>
+
+<div id="main">
+  <!-- LEFT: GAUGE -->
+  <div class="panel" id="gauge-panel">
+    <div id="gauge-wrap">
+      <svg id="gauge-svg" viewBox="0 0 180 180">
+        <!-- Background arc -->
+        <path id="gauge-bg" d="" fill="none" stroke="#21262d" stroke-width="14" stroke-linecap="round"/>
+        <!-- Value arc -->
+        <path id="gauge-arc" d="" fill="none" stroke="#00d264" stroke-width="12" stroke-linecap="round"/>
+      </svg>
+      <div id="gauge-value">
+        <div id="gauge-v">220V</div>
+        <div id="gauge-label">GRID VOLTAGE</div>
+      </div>
+    </div>
+    <div class="zone-labels">
+      <span style="color:#e3b341">LOW</span>
+      <span style="color:#56d364">NORMAL</span>
+      <span style="color:#f85149">SURGE</span>
+    </div>
+  </div>
+
+  <!-- CENTER: WAVEFORM -->
+  <div class="panel" id="wave-panel">
+    <h3>VOLTAGE WAVEFORM — REAL-TIME</h3>
+    <canvas id="wave-canvas"></canvas>
+    <div class="thresholds">
+      <span class="t-surge">── SURGE >300V</span>
+      <span class="t-normal">── NORMAL 140–300V</span>
+      <span class="t-brown">── BROWNOUT &lt;140V</span>
+    </div>
+  </div>
+
+  <!-- RIGHT: STATUS -->
+  <div class="panel" id="status-panel">
+    <div class="status-box" id="sys-status">
+      <h4>SYSTEM STATE</h4>
+      <div class="val" id="state-val">● NOMINAL</div>
+      <div id="state-desc" style="font-size:10px;color:#484f58;margin-top:6px">All parameters within safe range</div>
+    </div>
+
+    <div class="status-box" style="background:#080c11">
+      <h4>RELAY STATUS</h4>
+      <div class="relay-diagram" id="relay-diagram">
+        <div class="wire"></div>
+        <div class="switch-closed" id="relay-switch"></div>
+        <div class="wire"></div>
+        <div class="motor" id="motor-icon" style="background:#56d36422;color:#56d364">M</div>
+      </div>
+      <div id="relay-label" style="font-size:11px;color:#56d364;margin-top:8px">CLOSED — Motor Running</div>
+    </div>
+
+    <div class="status-box" style="background:#080c11">
+      <h4>RFID AUTH</h4>
+      <div id="rfid-status" style="font-size:12px;color:#484f58">Awaiting fault...</div>
+    </div>
+
+    <div class="status-box" style="background:#080c11">
+      <h4>FAULT LOG</h4>
+      <div id="fault-log" style="font-size:10px;color:#484f58;line-height:1.8">No faults recorded</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM: CONTROLS -->
+  <div id="controls">
+    <span>SIMULATE VOLTAGE:</span>
+    <input type="range" id="volt-slider" min="0" max="440" value="220" oninput="setVoltage(this.value)"/>
+    <span id="volt-display">220V</span>
+    <button onclick="simSurge()">⚡ SURGE</button>
+    <button onclick="simBrownout()">📉 BROWNOUT</button>
+    <button onclick="scanRFID()">🪪 SCAN BADGE</button>
+    <button onclick="autoDemo()">▶ AUTO DEMO</button>
+    <button onclick="resetAll()" style="border-color:#f85149;color:#f85149">⟳ RESET</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('wave-canvas');
+const ctx = canvas.getContext('2d');
+const history = new Array(300).fill(220);
+
+let voltage = 220;
+let state = 'NORMAL'; // NORMAL, SURGE, BROWNOUT, LOCKED
+let faults = [];
+let autoDemoTimer = null;
+let animFrame;
+
+// ── GAUGE ────────────────────────────────────────────────────
+function polarToXY(cx, cy, r, angleDeg) {
+  const rad = (angleDeg - 90) * Math.PI / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function describeArc(cx, cy, r, startDeg, endDeg) {
+  const s = polarToXY(cx, cy, r, startDeg);
+  const e = polarToXY(cx, cy, r, endDeg);
+  const large = endDeg - startDeg > 180 ? 1 : 0;
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
+}
+
+const gaugeBg  = document.getElementById('gauge-bg');
+const gaugeArc = document.getElementById('gauge-arc');
+gaugeBg.setAttribute('d', describeArc(90, 90, 70, 135, 405));
+
+function updateGauge(v) {
+  const endDeg = 135 + (Math.min(Math.max(v, 0), 440) / 440) * 270;
+  gaugeArc.setAttribute('d', describeArc(90, 90, 70, 135, Math.max(136, endDeg)));
+  const c = v > 300 ? '#f85149' : v < 140 ? '#e3b341' : '#00d264';
+  gaugeArc.setAttribute('stroke', c);
+  document.getElementById('gauge-v').style.color = c;
+  document.getElementById('gauge-v').textContent = Math.round(v) + 'V';
+}
+
+// ── WAVEFORM ─────────────────────────────────────────────────
+function drawWave() {
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  canvas.width = W; canvas.height = H;
+
+  ctx.fillStyle = '#080c11';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = '#161b22';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0, H * i/4);
+    ctx.lineTo(W, H * i/4);
+    ctx.stroke();
+  }
+
+  // Threshold lines
+  const surgeY    = H - (300/440) * H;
+  const brownoutY = H - (140/440) * H;
+  ctx.strokeStyle = '#f8514966'; ctx.lineWidth = 1;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(0, surgeY);    ctx.lineTo(W, surgeY);    ctx.stroke();
+  ctx.strokeStyle = '#e3b34166';
+  ctx.beginPath(); ctx.moveTo(0, brownoutY); ctx.lineTo(W, brownoutY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Waveform
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  history.forEach((v, i) => {
+    const x = (i / history.length) * W;
+    const y = H - (v / 440) * H;
+    const c = v > 300 ? '#f85149' : v < 140 ? '#e3b341' : '#56d364';
+    ctx.strokeStyle = c;
+    if (i === 0) ctx.moveTo(x, y);
+    else { ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y); }
+  });
+}
+
+// ── STATE MACHINE ────────────────────────────────────────────
+function setFault(type) {
+  if (state !== 'NORMAL') return;
+  state = 'LOCKED';
+
+  const sysBox = document.getElementById('sys-status');
+  const stateVal = document.getElementById('state-val');
+  const stateDesc = document.getElementById('state-desc');
+
+  sysBox.style.borderColor = '#f85149';
+  sysBox.style.background = '#f8514911';
+  stateVal.style.color = '#f85149';
+  stateVal.className = 'val flashing';
+  stateVal.textContent = type === 'SURGE' ? '⚠ POWER SURGE' : '⚠ BROWNOUT';
+  stateDesc.textContent = 'Grid locked — Scan tech badge to reset';
+  stateDesc.style.color = '#f85149';
+
+  // Open relay
+  document.getElementById('relay-diagram').innerHTML = `
+    <div class="wire"></div>
+    <div class="switch-open">✕</div>
+    <div class="wire" style="opacity:0.2"></div>
+    <div class="motor" style="background:#f8514922;color:#f85149">M</div>`;
+  document.getElementById('relay-label').style.color = '#f85149';
+  document.getElementById('relay-label').textContent = 'OPEN — Motor Protected';
+
+  document.getElementById('rfid-status').textContent = '🔒 Scan badge to reset';
+  document.getElementById('rfid-status').style.color = '#e3b341';
+
+  const ts = new Date().toLocaleTimeString();
+  faults.unshift(`${ts} — ${type}`);
+  if (faults.length > 5) faults.pop();
+  document.getElementById('fault-log').innerHTML = faults.map(f =>
+    `<div style="color:${f.includes('SURGE')?'#f85149':'#e3b341'}">${f}</div>`
+  ).join('');
+}
+
+function scanRFID() {
+  if (state !== 'LOCKED') {
+    document.getElementById('rfid-status').textContent = 'No fault — nothing to reset';
+    return;
+  }
+  document.getElementById('rfid-status').textContent = '✅ TECH AUTHORIZED — Resetting...';
+  document.getElementById('rfid-status').style.color = '#56d364';
+  setTimeout(() => resetAll(), 1500);
+}
+
+function resetAll() {
+  state = 'NORMAL';
+  voltage = 220;
+  document.getElementById('volt-slider').value = 220;
+  document.getElementById('volt-display').textContent = '220V';
+
+  const sysBox = document.getElementById('sys-status');
+  sysBox.style.borderColor = '#56d364';
+  sysBox.style.background = '#56d36411';
+  const stateVal = document.getElementById('state-val');
+  stateVal.className = 'val';
+  stateVal.style.color = '#56d364';
+  stateVal.textContent = '● NOMINAL';
+  document.getElementById('state-desc').textContent = 'All parameters within safe range';
+  document.getElementById('state-desc').style.color = '#484f58';
+
+  document.getElementById('relay-diagram').innerHTML = `
+    <div class="wire"></div>
+    <div class="switch-closed"></div>
+    <div class="wire"></div>
+    <div class="motor" style="background:#56d36422;color:#56d364">M</div>`;
+  document.getElementById('relay-label').style.color = '#56d364';
+  document.getElementById('relay-label').textContent = 'CLOSED — Motor Running';
+  document.getElementById('rfid-status').textContent = 'System nominal';
+  document.getElementById('rfid-status').style.color = '#484f58';
+}
+
+function setVoltage(v) {
+  if (state !== 'NORMAL') return;
+  voltage = parseFloat(v);
+  document.getElementById('volt-display').textContent = Math.round(v) + 'V';
+  if (voltage > 300) setFault('SURGE');
+  else if (voltage < 140) setFault('BROWNOUT');
+}
+
+function simSurge()    { document.getElementById('volt-slider').value = 400; setVoltage(400); }
+function simBrownout() { document.getElementById('volt-slider').value = 80;  setVoltage(80);  }
+
+let demoStep = 0;
+function autoDemo() {
+  clearInterval(autoDemoTimer);
+  resetAll();
+  demoStep = 0;
+  const steps = [
+    () => setVoltage(220),
+    () => setVoltage(260),
+    () => setVoltage(290),
+    () => { document.getElementById('volt-slider').value=400; setVoltage(400); }, // surge
+    () => {}, () => {}, // hold in fault
+    () => scanRFID(),    // auto reset
+    () => setVoltage(180),
+    () => setVoltage(150),
+    () => { document.getElementById('volt-slider').value=80; setVoltage(80); }, // brownout
+    () => {}, () => {},
+    () => scanRFID(),
+  ];
+  autoDemoTimer = setInterval(() => {
+    if (demoStep < steps.length) { steps[demoStep](); demoStep++; }
+    else clearInterval(autoDemoTimer);
+  }, 2000);
+}
+
+// ── ANIMATION LOOP ───────────────────────────────────────────
+function loop() {
+  history.shift();
+  // Add slight noise for realism
+  const noisy = voltage + (Math.random() - 0.5) * 4;
+  history.push(noisy);
+  updateGauge(noisy);
+  drawWave();
+  animFrame = requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
