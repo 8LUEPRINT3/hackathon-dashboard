@@ -920,87 +920,99 @@ function getEarlyWarningStage(drift, hrs) {
 }
 
 function updateEarlyWarningPanel(v) {
+  const now = Date.now();
+  if(now - ewLastUpdate < EW_UPDATE_MS) return;
+  ewLastUpdate = now;
+
   if(!baselineLocked) {
     const pct = Math.round((baselineBuffer.length / BASELINE_SAMPLES) * 100);
     document.getElementById('ew-summary').textContent =
-      `Establishing baseline... ${pct}% (need ${BASELINE_SAMPLES - baselineBuffer.length} more samples)`;
+      'Establishing baseline... '+pct+'% ('+baselineBuffer.length+'/'+BASELINE_SAMPLES+' samples)';
     document.getElementById('ew-summary').style.color = '#484f58';
     return;
   }
 
-  const drift = v - baselineAvg;
-  const driftPct = (drift / baselineAvg) * 100;
+  const rawDrift = ((v - baselineAvg) / baselineAvg) * 100;
+  ewSmoothedDrift = ewSmoothedDrift * 0.85 + rawDrift * 0.15;
 
-  // Track drift history
-  driftHistory.push(driftPct);
+  driftHistory.push(ewSmoothedDrift);
   if(driftHistory.length > 200) driftHistory.shift();
 
-  // Calc degradation
-  degradationRate = calcDegradationRate();
-  hoursToFault = estimateHoursToFault(v, degradationRate);
-  const stage = getEarlyWarningStage(driftPct, hoursToFault);
+  const rawRate = calcDegradationRate();
+  ewSmoothedRate = ewSmoothedRate * 0.92 + rawRate * 0.08;
+  degradationRate = ewSmoothedRate;
 
-  // Update baseline box
-  document.getElementById('bl-avg').textContent  = baselineAvg.toFixed(1)+'%';
-  document.getElementById('bl-avg').style.color  = '#56d364';
-  document.getElementById('bl-cur').textContent  = v.toFixed(1)+'%';
-  document.getElementById('bl-cur').style.color  = driftPct>WATCH_DRIFT?'#e3b341':'#56d364';
+  const rawHrs = estimateHoursToFault(v, ewSmoothedRate);
+  if(rawHrs !== null) {
+    ewSmoothedHrs = ewSmoothedHrs === null ? rawHrs : ewSmoothedHrs * 0.85 + rawHrs * 0.15;
+  } else {
+    ewSmoothedHrs = null;
+  }
+  hoursToFault = ewSmoothedHrs;
 
-  const driftColor = driftPct>=CRITICAL_DRIFT?'#f85149':driftPct>=WARNING_DRIFT?'#e3b341':driftPct>=WATCH_DRIFT?'#bc8cff':'#56d364';
-  document.getElementById('bl-drift').textContent = (driftPct>0?'+':'')+driftPct.toFixed(1)+'%';
-  document.getElementById('bl-drift').style.color = driftColor;
-  document.getElementById('bl-rate').textContent  = degradationRate>0?'+'+degradationRate.toFixed(2)+'%/min':'stable';
-  document.getElementById('bl-rate').style.color  = degradationRate>0.5?'#e3b341':'#56d364';
+  const stage = getEarlyWarningStage(ewSmoothedDrift, hoursToFault);
 
-  // Update stage cards
-  const stages = ['watch','advisory','warning','critical'];
-  const stageMap = { WATCH:0, ADVISORY:1, WARNING:2, CRITICAL:3 };
-  const activeIdx = stageMap[stage] ?? -1;
-
-  stages.forEach((s,i) => {
-    const el = document.getElementById('ew-'+s);
-    el.className = 'ew-stage';
-    if(i < activeIdx) el.className += ' passed';
-    else if(i === activeIdx) el.className += ' active-'+s;
-  });
-
-  // Update stage time values
-  const hrsStr = hoursToFault===null?'—':hoursToFault>24?'>24hrs':hoursToFault>1?hoursToFault.toFixed(1)+'hrs':(hoursToFault*60).toFixed(0)+'min';
-
-  document.getElementById('ew-watch-val').textContent  = driftPct>=WATCH_DRIFT    ? '+'+driftPct.toFixed(1)+'%' : '—';
-  document.getElementById('ew-adv-val').textContent    = driftPct>=ADVISORY_DRIFT ? '+'+driftPct.toFixed(1)+'%' : '—';
-  document.getElementById('ew-warn-val').textContent   = driftPct>=WARNING_DRIFT  ? '+'+driftPct.toFixed(1)+'%' : '—';
-  document.getElementById('ew-crit-val').textContent   = driftPct>=CRITICAL_DRIFT ? '+'+driftPct.toFixed(1)+'%' : '—';
-
-  if(hoursToFault !== null) {
-    document.getElementById('ew-crit-time').textContent = hrsStr+' to fault';
-    document.getElementById('ew-warn-time').textContent = hoursToFault>1?(hoursToFault+1).toFixed(1)+'hrs':'imminent';
-    document.getElementById('ew-adv-time').textContent  = hoursToFault>2?(hoursToFault+2).toFixed(1)+'hrs':'<2hrs';
-    document.getElementById('ew-watch-time').textContent= hoursToFault>4?(hoursToFault+3).toFixed(1)+'hrs':'<4hrs';
+  // Only update CSS classes when stage actually changes — stops flicker
+  if(stage !== ewLastStage) {
+    const stages = ['watch','advisory','warning','critical'];
+    const stageMap = { WATCH:0, ADVISORY:1, WARNING:2, CRITICAL:3 };
+    const activeIdx = stageMap[stage] ?? -1;
+    stages.forEach((s,i) => {
+      const el = document.getElementById('ew-'+s);
+      const c = 'ew-stage'+(i<activeIdx?' passed':i===activeIdx?' active-'+s:'');
+      if(el.className !== c) el.className = c;
+    });
+    ewLastStage = stage;
   }
 
-  // Summary message
-  const sumEl = document.getElementById('ew-summary');
-  const msgs = {
-    NORMAL:   ['#56d364', `✅ Joint healthy — load within ±${WATCH_DRIFT}% of baseline.
-No action required.`],
-    WATCH:    ['#58a6ff', `👁 WATCH: Load drifted +${driftPct.toFixed(1)}% above baseline.
-Monitor closely. No action yet.`],
-    ADVISORY: ['#bc8cff', `📋 ADVISORY: Degradation detected.
-Schedule maintenance for next planned downtime.
-Est. ${hrsStr} before fault.`],
-    WARNING:  ['#e3b341', `⚠ WARNING: Significant drift +${driftPct.toFixed(1)}%.
-Alert maintenance team NOW.
-Est. ${hrsStr} remaining.`],
-    CRITICAL: ['#f85149', `🔴 CRITICAL: Fault imminent in ${hrsStr}.
-Reduce speed + dispatch tech immediately.
-Do NOT wait for shift end.`],
-  };
-  const [col, msg] = msgs[stage] || msgs.NORMAL;
-  sumEl.style.color = col;
-  sumEl.style.borderColor = col+'44';
-  sumEl.style.background = col+'09';
-  sumEl.textContent = msg;
+  // Baseline box
+  document.getElementById('bl-avg').textContent = baselineAvg.toFixed(1)+'%';
+  document.getElementById('bl-avg').style.color = '#56d364';
+  document.getElementById('bl-cur').textContent = v.toFixed(1)+'%';
+  document.getElementById('bl-cur').style.color = ewSmoothedDrift>WATCH_DRIFT?'#e3b341':'#56d364';
+  const dc = ewSmoothedDrift>=CRITICAL_DRIFT?'#f85149':ewSmoothedDrift>=WARNING_DRIFT?'#e3b341':ewSmoothedDrift>=WATCH_DRIFT?'#bc8cff':'#56d364';
+  document.getElementById('bl-drift').textContent = (ewSmoothedDrift>0?'+':'')+ewSmoothedDrift.toFixed(1)+'%';
+  document.getElementById('bl-drift').style.color = dc;
+  document.getElementById('bl-rate').textContent  = ewSmoothedRate>0.01?'+'+ewSmoothedRate.toFixed(2)+'%/min':'stable';
+  document.getElementById('bl-rate').style.color  = ewSmoothedRate>0.5?'#e3b341':'#56d364';
+
+  // Hours string — rounded to 1 decimal to stop constant updates
+  const h = hoursToFault;
+  const hrsStr = h===null?'—':h>24?'>24 hrs':h>1?(Math.round(h*10)/10)+' hrs':(Math.round(h*60))+' min';
+
+  // Stage values — only set if changed
+  function setIfChanged(id, val) {
+    const el = document.getElementById(id);
+    if(el && el.textContent !== val) el.textContent = val;
+  }
+  setIfChanged('ew-watch-val',  ewSmoothedDrift>=WATCH_DRIFT    ? '+'+ewSmoothedDrift.toFixed(1)+'%' : '—');
+  setIfChanged('ew-adv-val',    ewSmoothedDrift>=ADVISORY_DRIFT ? '+'+ewSmoothedDrift.toFixed(1)+'%' : '—');
+  setIfChanged('ew-warn-val',   ewSmoothedDrift>=WARNING_DRIFT  ? '+'+ewSmoothedDrift.toFixed(1)+'%' : '—');
+  setIfChanged('ew-crit-val',   ewSmoothedDrift>=CRITICAL_DRIFT ? '+'+ewSmoothedDrift.toFixed(1)+'%' : '—');
+
+  if(h !== null) {
+    setIfChanged('ew-crit-time',  hrsStr+' to fault');
+    setIfChanged('ew-warn-time',  h>1?(Math.round((h+1)*10)/10)+' hrs':'imminent');
+    setIfChanged('ew-adv-time',   h>2?(Math.round((h+2)*10)/10)+' hrs':'<2 hrs');
+    setIfChanged('ew-watch-time', h>4?(Math.round((h+3)*10)/10)+' hrs':'<4 hrs');
+  }
+
+  // Summary — only update on stage change
+  if(stage !== currentStage) {
+    const sumEl = document.getElementById('ew-summary');
+    const msgs = {
+      NORMAL:   ['#56d364','#56d36409','✅ Joint healthy — load within baseline. No action required.'],
+      WATCH:    ['#58a6ff','#58a6ff09','👁 WATCH: Load drifting above baseline. Monitor next 30 min.'],
+      ADVISORY: ['#bc8cff','#bc8cff09','📋 ADVISORY: Degradation confirmed. Schedule maintenance at next downtime. Est. '+hrsStr+' before fault.'],
+      WARNING:  ['#e3b341','#e3b34109','⚠ WARNING: Alert maintenance NOW. Est. '+hrsStr+' remaining.'],
+      CRITICAL: ['#f85149','#f8514909','🔴 CRITICAL: Fault in ~'+hrsStr+'. Dispatch tech immediately.'],
+    };
+    const [col,bg,msg] = msgs[stage]||msgs.NORMAL;
+    sumEl.style.color = col;
+    sumEl.style.borderColor = col+'44';
+    sumEl.style.background = bg;
+    sumEl.textContent = msg;
+  }
 
   currentStage = stage;
 }
