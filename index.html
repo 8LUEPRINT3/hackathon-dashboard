@@ -138,6 +138,78 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
 .roi-lbl{font-size:8px;color:#484f58;letter-spacing:1px;margin-top:1px;white-space:nowrap}
 .roi-sub{font-size:8px;margin-top:1px;white-space:nowrap}
 #savings-ticker{font-size:12px;color:#56d364;margin-left:auto;flex-shrink:0;font-weight:700}
+
+/* HERO LOAD DISPLAY */
+#hero-load{
+  background:#0d1117;
+  border-bottom:2px solid #21262d;
+  padding:10px 20px;
+  display:flex;
+  align-items:center;
+  gap:20px;
+  flex-shrink:0;
+}
+#hero-num{
+  font-size:72px;
+  font-weight:900;
+  line-height:1;
+  color:#56d364;
+  transition:color .3s;
+  min-width:160px;
+  font-family:'Courier New',monospace;
+  letter-spacing:-2px;
+}
+#hero-label{
+  font-size:9px;
+  color:#484f58;
+  letter-spacing:3px;
+  margin-bottom:4px;
+}
+#hero-zone-badge{
+  font-size:14px;
+  font-weight:700;
+  padding:4px 14px;
+  border-radius:20px;
+  background:#56d36422;
+  border:1px solid #56d364;
+  color:#56d364;
+  transition:all .3s;
+  letter-spacing:2px;
+}
+#hero-slider-wrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+#hero-slider-label{
+  font-size:9px;
+  color:#484f58;
+  letter-spacing:2px;
+}
+#vslider{
+  width:100% !important;
+  max-width:100% !important;
+  height:8px;
+  accent-color:#58a6ff;
+  cursor:pointer;
+}
+#hero-trend{
+  font-size:13px;
+  font-weight:700;
+  color:#56d364;
+  min-width:120px;
+  text-align:center;
+}
+#hero-temp{
+  font-size:28px;
+  font-weight:700;
+  color:#e3b341;
+  min-width:80px;
+  text-align:center;
+  font-family:'Courier New',monospace;
+}
+#hero-temp-lbl{font-size:8px;color:#484f58;letter-spacing:2px;text-align:center}
 </style>
 </head>
 <body>
@@ -186,6 +258,40 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
     <div class="roi-sub" style="color:#484f58">This session</div>
   </div>
   <div id="savings-ticker">💰 SESSION SAVINGS: $0</div>
+</div>
+
+<!-- HERO LOAD DISPLAY -->
+<div id="hero-load">
+  <div>
+    <div id="hero-label">JOINT LOAD</div>
+    <div id="hero-num">50%</div>
+    <div id="hero-zone-badge">● GREEN</div>
+  </div>
+
+  <div id="hero-slider-wrap">
+    <div id="hero-slider-label">◀ DRAG TO SIMULATE LOAD ▶</div>
+    <input type="range" id="vslider" min="0" max="100" value="50" oninput="setLoad(this.value)" style="width:100%"/>
+    <div style="display:flex;justify-content:space-between;font-size:8px;color:#30363d">
+      <span>0% STALL</span><span>25% LOW</span><span>50% NOMINAL</span><span>65% CAUTION</span><span>80% FAULT</span><span>100%</span>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+    <div id="hero-temp-lbl">MOTOR TEMP</div>
+    <div id="hero-temp">--°C</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+    <div id="hero-trend" style="color:#56d364">→ STABLE</div>
+    <div id="hero-rate" style="font-size:10px;color:#484f58">+0.0%/cycle</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:4px;min-width:120px">
+    <div style="font-size:8px;color:#484f58;letter-spacing:2px;margin-bottom:2px">ZONE BANDS</div>
+    <div style="font-size:9px"><span style="color:#56d364">■</span> <span style="color:#8b949e">GREEN  40–65%</span></div>
+    <div style="font-size:9px"><span style="color:#e3b341">■</span> <span style="color:#8b949e">AMBER  65–80%</span></div>
+    <div style="font-size:9px"><span style="color:#f85149">■</span> <span style="color:#8b949e">RED    >80% / <25%</span></div>
+  </div>
 </div>
 <div id="ew-panel">
   <div style="font-size:9px;color:#484f58;letter-spacing:2px;flex-shrink:0">PREDICTIVE HORIZON</div>
@@ -396,8 +502,7 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
 </div>
 <div id="controls">
   <span>LOAD:</span>
-  <input type="range" id="vslider" min="0" max="100" value="50" oninput="setLoad(this.value)"/>
-  <span id="vdisp">50%</span>
+  <span id="vdisp" style="font-size:10px;color:#484f58">Manual slider ↑</span>
   <button class="cbtn amber" onclick="simAmber()">⚠ CAUTION</button>
   <button class="cbtn red"   onclick="simOverload()">🔴 OVERLOAD</button>
   <button class="cbtn red"   onclick="simStall()">📉 STALL</button>
@@ -552,6 +657,25 @@ function updateStatusPanel(v,z){
   document.getElementById('sv-zone').textContent=z==='GREEN'?'● GREEN':z==='AMBER'?'▲ AMBER':'● RED';
   document.getElementById('sv-load').style.color=c;
   document.getElementById('sv-load').textContent=Math.round(v)+'%';
+  // Hero display
+  const heroNum = document.getElementById('hero-num');
+  const heroBadge = document.getElementById('hero-zone-badge');
+  const heroTrend = document.getElementById('hero-trend');
+  const heroRate  = document.getElementById('hero-rate');
+  if(heroNum){
+    heroNum.textContent = Math.round(v)+'%';
+    heroNum.style.color = c;
+  }
+  if(heroBadge){
+    heroBadge.textContent = z==='GREEN'?'● GREEN':z==='AMBER'?'▲ AMBER':'■ FAULT';
+    heroBadge.style.color = c;
+    heroBadge.style.borderColor = c;
+    heroBadge.style.background = c+'22';
+  }
+  const tStr=trend>8?'▲▲ RISING FAST':trend>3?'▲ RISING':trend<-8?'▼▼ FALLING':trend<-3?'▼ FALLING':'→ STABLE';
+  const tCol=trend>8?'#f85149':trend>3?'#e3b341':trend<-3?'#58a6ff':'#56d364';
+  if(heroTrend){ heroTrend.textContent=tStr; heroTrend.style.color=tCol; }
+  if(heroRate){ heroRate.textContent=(trend>0?'+':'')+trend.toFixed(1)+'%/cycle'; heroRate.style.color=tCol; }
 
   // Trend display
   const tStr=trend>8?'▲▲ RISING FAST':trend>3?'▲ RISING':trend<-8?'▼▼ FALLING':trend<-3?'▼ FALLING':'→ STABLE';
@@ -1074,6 +1198,13 @@ function loop(){
   updateBaseline(noisy);
   longHistory.shift(); longHistory.push(noisy);
   updateEarlyWarningPanel(noisy);
+  // Update hero temp display
+  const htEl = document.getElementById('hero-temp');
+  if(htEl && baselineLocked){
+    const fakeTemp = 22 + (noisy * 0.3);
+    htEl.textContent = fakeTemp.toFixed(0)+'°C';
+    htEl.style.color = fakeTemp>40?'#f85149':fakeTemp>35?'#e3b341':'#56d364';
+  }
 
   if(!jointDown) applyZone(noisy);
 
