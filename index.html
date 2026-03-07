@@ -3,1694 +3,1032 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>UR10e ZTA Predictive Monitor</title>
+<title>Power-Shift ZTA — Honda UR10e Fault Monitor</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Courier New',monospace;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
-/* HEADER */
-#header{background:#010409;border-bottom:1px solid #21262d;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
-#header h1{font-size:14px;color:#f0f6fc;letter-spacing:2px}
-.sub{font-size:9px;color:#484f58;margin-top:2px}
-.hbadge{padding:3px 10px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:1px;margin-left:auto}
-.green-b{background:#56d36422;border:1px solid #56d364;color:#56d364}
-.amber-b{background:#e3b34122;border:1px solid #e3b341;color:#e3b341}
-.red-b  {background:#f8514922;border:1px solid #f85149;color:#f85149;animation:flash .6s infinite}
+/* ── HEADER ── */
+#header{background:#010409;border-bottom:2px solid #21262d;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#header h1{font-size:13px;letter-spacing:3px;color:#58a6ff}
+.hbadge{font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;letter-spacing:1px}
+.green-b{background:#56d36422;color:#56d364;border:1px solid #56d364}
+.amber-b{background:#e3b34122;color:#e3b341;border:1px solid #e3b341}
+.red-b  {background:#f8514922;color:#f85149;border:1px solid #f85149;animation:flash .7s infinite}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* LAYOUT */
-#body{flex:1;display:grid;grid-template-columns:200px 1fr 220px;grid-template-rows:1fr 1fr;gap:1px;background:#161b22;min-height:0}
-.panel{background:#0d1117;padding:12px;overflow:hidden}
-.ptitle{font-size:9px;color:#484f58;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px}
-.ptitle .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+/* ── HERO LOAD ── */
+#hero{background:#010409;border-bottom:1px solid #21262d;padding:10px 20px;display:flex;align-items:center;gap:24px;flex-shrink:0}
+#hero-num{font-size:80px;font-weight:900;line-height:1;color:#56d364;transition:color .3s;min-width:170px;letter-spacing:-3px}
+#hero-zone{font-size:13px;font-weight:700;padding:4px 14px;border-radius:20px;background:#56d36422;border:1px solid #56d364;color:#56d364;transition:all .3s;letter-spacing:2px;margin-top:4px;display:inline-block}
+.hero-right{flex:1;display:flex;flex-direction:column;gap:8px}
+#hero-slider-lbl{font-size:9px;color:#484f58;letter-spacing:2px}
+#vslider{width:100%;height:8px;accent-color:#58a6ff;cursor:pointer}
+.slider-marks{display:flex;justify-content:space-between;font-size:8px;color:#30363d;margin-top:2px}
+.hero-stats{display:flex;gap:20px;margin-top:4px}
+.hstat{display:flex;flex-direction:column;align-items:center}
+.hstat-val{font-size:20px;font-weight:700}
+.hstat-lbl{font-size:8px;color:#484f58;letter-spacing:1px}
 
-/* GAUGE */
-#gauge-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;grid-row:1/3}
+/* ── ROI BAR ── */
+#roi{background:#010409;border-bottom:1px solid #21262d;padding:6px 16px;display:flex;gap:12px;align-items:center;flex-shrink:0;overflow-x:auto}
+.roi-s{display:flex;flex-direction:column;align-items:center;padding:2px 14px;border-right:1px solid #21262d;flex-shrink:0}
+.roi-s:last-child{border:none;margin-left:auto}
+.roi-n{font-size:15px;font-weight:700}
+.roi-l{font-size:8px;color:#484f58;letter-spacing:1px;white-space:nowrap}
+
+/* ── BODY ── */
+#body{display:grid;grid-template-columns:200px 1fr 200px;grid-template-rows:1fr 1fr;flex:1;overflow:hidden;gap:1px;background:#21262d}
+.panel{background:#0d1117;padding:10px 12px;overflow:hidden}
+.ptitle{font-size:9px;color:#484f58;letter-spacing:2px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* Gauge */
+#gauge-panel{grid-row:1/3;display:flex;flex-direction:column;align-items:center;gap:8px}
 #gauge-wrap{position:relative;width:150px;height:150px}
-#gsv{width:150px;height:150px}
+#gcanvas{width:150px;height:150px}
 #gval{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-#gnum{font-size:26px;font-weight:700;color:#56d364}
+#gnum{font-size:28px;font-weight:700;color:#56d364}
 #glbl{font-size:8px;color:#484f58;letter-spacing:1px}
-.zlabels{display:flex;justify-content:space-between;width:150px;font-size:8px}
+.pbar-wrap{width:100%;background:#21262d;border-radius:4px;height:6px;overflow:hidden}
+#pbar{height:6px;width:50%;background:#56d364;border-radius:4px;transition:width .3s,background .3s}
 
-/* TREND BOX */
-.trend-box{width:100%;background:#080c11;border-radius:6px;padding:8px 10px;border:1px solid #21262d}
-.trow{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:10px}
-.tval{font-weight:700}
-.predict-bar{width:100%;height:6px;background:#21262d;border-radius:3px;margin-top:6px;overflow:hidden}
-.predict-fill{height:6px;border-radius:3px;transition:width .5s,background .5s}
+/* Wave */
+#wave-panel{grid-column:2;grid-row:1/3;display:flex;flex-direction:column}
+#wcanvas{flex:1;width:100%;display:block}
 
-/* WAVEFORM — spans 2 rows */
-#wave-panel{grid-row:1/3;display:flex;flex-direction:column}
-#wcanvas{flex:1;width:100%;background:#080c11;border-radius:6px;display:block;min-height:0}
-.wave-legend{display:flex;gap:12px;margin-top:5px;flex-wrap:wrap}
-.wl{display:flex;align-items:center;gap:4px;font-size:9px}
-.wl-line{width:20px;height:2px;border-radius:1px}
+/* Status */
+#status-panel{grid-column:3;display:flex;flex-direction:column;gap:4px}
+.sr{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid #161b22}
+.srlbl{color:#484f58}
+.srval{font-weight:700}
 
-/* STATUS PANELS */
-#joint-panel{}
-.srow{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:#080c11;border-radius:5px;margin-bottom:4px;border:1px solid #21262d}
-.srlabel{font-size:9px;color:#484f58}
-.srval{font-size:11px;font-weight:700}
+/* MFA */
+#mfa-panel{grid-column:3;display:flex;flex-direction:column;gap:6px}
+#mfa-msg{font-size:9px;line-height:1.5;color:#484f58;min-height:40px}
+.rfid-row{display:flex;justify-content:space-between;align-items:center;font-size:9px;padding:3px 0;border-bottom:1px solid #161b22}
+.rfid-lbl{color:#8b949e}
+.rfid-stat{font-size:8px;font-weight:700;color:#484f58}
 
-/* ZTA AUTH PANEL */
-#auth-panel{}
-.role-row{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#080c11;border-radius:5px;margin-bottom:4px;border:1px solid #21262d}
-.rbadge{font-size:8px;padding:1px 6px;border-radius:3px;font-weight:700;flex-shrink:0}
-.rinfo{flex:1}
-.rname{font-size:10px;color:#c9d1d9}
-.rperms{font-size:8px;color:#484f58}
-.rstatus{font-size:9px;font-weight:700}
+/* Prediction */
+#predict-card{background:#e3b34111;border:1px solid #e3b341;border-radius:6px;padding:8px;display:none;margin-top:4px}
+#predict-card.show{display:block}
+#predict-msg{font-size:9px;color:#e3b341;line-height:1.4}
+#predict-time{font-size:11px;font-weight:700;color:#f85149;margin-top:4px}
 
-/* FAULT LOG */
-#log-panel{grid-column:1/-1;background:#010409;border-top:1px solid #21262d;padding:6px 14px;display:flex;gap:16px;align-items:center;flex-shrink:0;overflow:hidden}
-#log-scroll{flex:1;display:flex;gap:10px;overflow:hidden}
-.log-item{font-size:9px;white-space:nowrap;padding:2px 8px;border-radius:4px;border:1px solid #21262d}
+/* Poka-Yoke */
+#poka-panel{background:#010409;border-top:1px solid #21262d;padding:10px 16px;display:none;flex-shrink:0}
+#poka-panel.show{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pstep{display:flex;align-items:center;gap:6px;font-size:9px;padding:6px 10px;border-radius:5px;border:1px solid #21262d;color:#484f58;transition:all .3s}
+.pstep.active{border-color:#e3b341;color:#e3b341;background:#e3b34111}
+.pstep.done{border-color:#56d364;color:#56d364;background:#56d36411}
+.pstep.error{border-color:#f85149;color:#f85149}
+.step-num{width:18px;height:18px;border-radius:50%;background:#21262d;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
 
-/* CONTROLS */
-#controls{background:#010409;border-top:1px solid #21262d;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
-#controls span{font-size:9px;color:#484f58}
-.cbtn{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:5px 12px;border-radius:5px;font-size:10px;cursor:pointer;font-family:monospace}
+/* Controls */
+#controls{background:#010409;border-top:1px solid #21262d;padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;align-items:center}
+.cbtn{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:5px 12px;border-radius:5px;font-size:9px;cursor:pointer;font-family:monospace;transition:background .2s}
 .cbtn:hover{background:#21262d}
+.cbtn:active{transform:scale(.97)}
 .cbtn.amber{border-color:#e3b341;color:#e3b341}
 .cbtn.red{border-color:#f85149;color:#f85149}
+.cbtn.blue{border-color:#58a6ff;color:#58a6ff}
 .cbtn.green{border-color:#56d364;color:#56d364}
-.cbtn.blue{border-color:#58a6ff;color:#79c0ff}
-#vslider{flex:1;max-width:220px;accent-color:#58a6ff}
-#vdisp{font-size:12px;color:#58a6ff;min-width:40px}
 
-/* PREDICT CARD */
-#predict-card{padding:8px 10px;border-radius:6px;border:1px solid #e3b34144;background:#e3b34109;margin-top:6px;display:none}
-#predict-card.show{display:block}
-#predict-title{font-size:9px;color:#e3b341;letter-spacing:1px;margin-bottom:4px}
-#predict-msg{font-size:11px;color:#f0f6fc;line-height:1.4}
-#predict-time{font-size:13px;font-weight:700;color:#e3b341;margin-top:4px}
+/* Log */
+#log-bar{background:#010409;border-top:1px solid #21262d;padding:5px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0;overflow-x:auto}
+#log-lbl{font-size:8px;color:#484f58;letter-spacing:2px;flex-shrink:0}
+#log-scroll{display:flex;gap:12px;overflow-x:auto}
+.log-item{font-size:8px;white-space:nowrap}
 
-@keyframes flash{0%,100%{opacity:1}50%{opacity:.3}}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #e3b34144}50%{box-shadow:0 0 0 6px transparent}}
-.pulsing{animation:pulse 1.5s infinite}
-
-/* POKA-YOKE PANEL */
-#poka-panel{grid-column:1/-1;background:#010409;border-top:1px solid #21262d;padding:10px 16px;display:none;gap:12px;align-items:flex-start;flex-shrink:0}
-#poka-panel.show{display:flex}
-.poka-steps{display:flex;gap:6px;flex-wrap:wrap;flex:1}
-.pstep{padding:6px 12px;border-radius:6px;border:1px solid #21262d;font-size:10px;display:flex;align-items:center;gap:6px;background:#080c11}
-.pstep.done{border-color:#56d364;background:#56d36411;color:#56d364}
-.pstep.active{border-color:#e3b341;background:#e3b34111;color:#e3b341;animation:pulse 1.2s infinite}
-.pstep.pending{color:#484f58}
-.pstep.error{border-color:#f85149;background:#f8514911;color:#f85149}
-.step-num{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
-.poka-info{min-width:200px;padding:10px;background:#080c11;border-radius:6px;border:1px solid #21262d}
-.poka-info h4{font-size:9px;color:#e3b341;letter-spacing:1px;margin-bottom:6px}
-#poka-current{font-size:11px;color:#f0f6fc;line-height:1.5}
-#poka-errors{font-size:10px;color:#f85149;margin-top:6px}
-
-/* HUMAN ERROR COUNTER */
-.error-counter{display:flex;flex-direction:column;align-items:center;padding:10px 14px;background:#080c11;border-radius:6px;border:1px solid #21262d}
-.error-counter .enum{font-size:26px;font-weight:700;color:#56d364;line-height:1}
-.error-counter .elbl{font-size:9px;color:#484f58;letter-spacing:1px;margin-top:3px}
-
-/* EARLY WARNING SYSTEM */
-#ew-panel{background:#0d1117;border-top:1px solid #21262d;padding:10px 16px;flex-shrink:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.ew-stage{flex:1;min-width:100px;padding:8px 10px;border-radius:6px;border:1px solid #21262d;background:#080c11;text-align:center;transition:all .4s}
-.ew-stage .es-label{font-size:8px;letter-spacing:1px;color:#484f58;margin-bottom:4px}
-.ew-stage .es-val{font-size:13px;font-weight:700;color:#484f58}
-.ew-stage .es-time{font-size:9px;color:#484f58;margin-top:2px}
-.ew-stage.active-watch   {border-color:#58a6ff;background:#58a6ff09}.ew-stage.active-watch    .es-val{color:#58a6ff}
-.ew-stage.active-advisory{border-color:#bc8cff;background:#bc8cff09}.ew-stage.active-advisory .es-val{color:#bc8cff}
-.ew-stage.active-warning {border-color:#e3b341;background:#e3b34109}.ew-stage.active-warning  .es-val{color:#e3b341}
-.ew-stage.active-critical{border-color:#f85149;background:#f8514909;animation:flash .8s infinite}.ew-stage.active-critical .es-val{color:#f85149}
-.ew-stage.passed{border-color:#21262d;background:#56d36409}.ew-stage.passed .es-val{color:#56d364}
-
-.baseline-box{background:#080c11;border:1px solid #21262d;border-radius:6px;padding:8px 12px;min-width:160px}
-.baseline-box h4{font-size:9px;color:#484f58;letter-spacing:1px;margin-bottom:5px}
-.bb-row{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
-.bb-lbl{color:#484f58}
-.bb-val{font-weight:700}
-
-#ew-summary{font-size:11px;padding:8px 12px;border-radius:6px;min-width:220px;line-height:1.5}
-
-/* ROI TICKER */
-#roi-bar{background:#010409;border-bottom:1px solid #21262d;padding:7px 16px;display:flex;gap:16px;align-items:center;flex-shrink:0;overflow-x:auto}
-#roi-bar::-webkit-scrollbar{height:2px}
-.roi-stat{display:flex;flex-direction:column;align-items:center;padding:4px 14px;border-right:1px solid #21262d;flex-shrink:0}
-.roi-stat:last-child{border-right:none}
-.roi-num{font-size:16px;font-weight:700}
-.roi-lbl{font-size:8px;color:#484f58;letter-spacing:1px;margin-top:1px;white-space:nowrap}
-.roi-sub{font-size:8px;margin-top:1px;white-space:nowrap}
-#savings-ticker{font-size:12px;color:#56d364;margin-left:auto;flex-shrink:0;font-weight:700}
-
-/* HERO LOAD DISPLAY */
-#hero-load{
-  background:#0d1117;
-  border-bottom:2px solid #21262d;
-  padding:10px 20px;
-  display:flex;
-  align-items:center;
-  gap:20px;
-  flex-shrink:0;
-}
-#hero-num{
-  font-size:72px;
-  font-weight:900;
-  line-height:1;
-  color:#56d364;
-  transition:color .3s;
-  min-width:160px;
-  font-family:'Courier New',monospace;
-  letter-spacing:-2px;
-}
-#hero-label{
-  font-size:9px;
-  color:#484f58;
-  letter-spacing:3px;
-  margin-bottom:4px;
-}
-#hero-zone-badge{
-  font-size:14px;
-  font-weight:700;
-  padding:4px 14px;
-  border-radius:20px;
-  background:#56d36422;
-  border:1px solid #56d364;
-  color:#56d364;
-  transition:all .3s;
-  letter-spacing:2px;
-}
-#hero-slider-wrap{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-#hero-slider-label{
-  font-size:9px;
-  color:#484f58;
-  letter-spacing:2px;
-}
-#vslider{
-  width:100% !important;
-  max-width:100% !important;
-  height:8px;
-  accent-color:#58a6ff;
-  cursor:pointer;
-}
-#hero-trend{
-  font-size:13px;
-  font-weight:700;
-  color:#56d364;
-  min-width:120px;
-  text-align:center;
-}
-#hero-temp{
-  font-size:28px;
-  font-weight:700;
-  color:#e3b341;
-  min-width:80px;
-  text-align:center;
-  font-family:'Courier New',monospace;
-}
-#hero-temp-lbl{font-size:8px;color:#484f58;letter-spacing:2px;text-align:center}
-
-/* MAINTENANCE PANEL */
-#maint-panel{background:#0d1117;border-top:1px solid #21262d;padding:12px 16px;flex-shrink:0}
-#maint-panel h3{font-size:9px;color:#484f58;letter-spacing:3px;margin-bottom:10px}
-.maint-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.maint-col h4{font-size:9px;color:#58a6ff;letter-spacing:2px;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:4px}
-
-/* Input form */
-.maint-form{display:flex;flex-direction:column;gap:6px}
-.maint-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.maint-sel,.maint-input{background:#161b22;border:1px solid #30363d;color:#e6edf3;
-  font-size:9px;padding:4px 8px;border-radius:4px;font-family:monospace}
-.maint-sel{flex:1;min-width:100px}
-.maint-input{flex:1;min-width:120px}
-.maint-btn{background:#21262d;border:1px solid #58a6ff;color:#58a6ff;
-  font-size:9px;padding:4px 10px;border-radius:4px;cursor:pointer;font-family:monospace;white-space:nowrap}
-.maint-btn:hover{background:#58a6ff22}
-
-/* Parts health table */
-.parts-table{width:100%;border-collapse:collapse;font-size:9px}
-.parts-table th{color:#484f58;letter-spacing:1px;padding:4px 6px;text-align:left;border-bottom:1px solid #21262d}
-.parts-table td{padding:5px 6px;border-bottom:1px solid #161b22;vertical-align:middle}
-.health-bar-wrap{width:80px;height:6px;background:#21262d;border-radius:3px;overflow:hidden;display:inline-block}
-.health-bar{height:100%;border-radius:3px;transition:width .5s,background .5s}
-.part-status{font-size:8px;padding:1px 6px;border-radius:8px;font-weight:700}
+/* Maintenance */
+#maint-panel{background:#0d1117;border-top:2px solid #21262d;padding:12px 16px;flex-shrink:0;display:none}
+#maint-panel.show{display:block}
+.maint-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+.mcol h4{font-size:9px;color:#58a6ff;letter-spacing:2px;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:4px}
+.mrow{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.msel,.minput{background:#161b22;border:1px solid #30363d;color:#e6edf3;font-size:9px;padding:4px 8px;border-radius:4px;font-family:monospace;flex:1;min-width:100px}
+.mbtn{background:#21262d;border:1px solid #58a6ff;color:#58a6ff;font-size:9px;padding:4px 12px;border-radius:4px;cursor:pointer;font-family:monospace}
+.mbtn:hover{background:#58a6ff22}
+.parts-tbl{width:100%;border-collapse:collapse;font-size:9px}
+.parts-tbl th{color:#484f58;letter-spacing:1px;padding:4px 6px;text-align:left;border-bottom:1px solid #21262d}
+.parts-tbl td{padding:4px 6px;border-bottom:1px solid #161b22;vertical-align:middle}
+.hbar-wrap{width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle}
+.hbar{height:100%;border-radius:3px;transition:all .5s}
+.ps{font-size:8px;padding:1px 5px;border-radius:8px;font-weight:700}
 .ps-good{background:#56d36422;color:#56d364;border:1px solid #56d364}
 .ps-warn{background:#e3b34122;color:#e3b341;border:1px solid #e3b341}
 .ps-crit{background:#f8514922;color:#f85149;border:1px solid #f85149}
-
-.maint-log-list{max-height:120px;overflow-y:auto;font-size:8px}
-.maint-log-item{padding:3px 6px;border-left:2px solid #30363d;margin:2px 0;color:#8b949e}
-.maint-log-item .ml-date{color:#58a6ff}
-.maint-log-item .ml-part{color:#e6edf3;font-weight:bold}
-
-.mtbf-box{background:#161b22;border:1px solid #21262d;border-radius:6px;padding:8px 10px;margin-top:8px}
+.mlog{max-height:100px;overflow-y:auto;margin-top:6px}
+.mlog-item{font-size:8px;padding:2px 6px;border-left:2px solid #30363d;margin:2px 0;color:#8b949e}
+.mtbf-box{background:#161b22;border:1px solid #21262d;border-radius:5px;padding:8px;margin-top:8px}
 .mtbf-row{display:flex;justify-content:space-between;font-size:9px;margin:2px 0}
-.mtbf-lbl{color:#484f58}
-.mtbf-val{font-weight:700;color:#e6edf3}
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div id="header">
-  <div>
-    <h1>🤖 UR10e ZTA — PREDICTIVE JOINT MONITOR</h1>
-    <div class="sub">ELBOW JOINT  |  CONTINUOUS VERIFICATION  |  TREND ANALYSIS  |  MFA RECOVERY</div>
+  <h1>⚡ POWER-SHIFT ZTA — UR10e JOINT MONITOR</h1>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span style="font-size:9px;color:#484f58" id="clock"></span>
+    <span class="hbadge green-b" id="hbadge">● NOMINAL</span>
   </div>
-  <span class="hbadge green-b" id="hbadge">● NOMINAL</span>
 </div>
 
-
-<!-- EARLY WARNING SYSTEM -->
+<!-- HERO LOAD + SLIDER -->
+<div id="hero">
+  <div>
+    <div style="font-size:9px;color:#484f58;letter-spacing:2px;margin-bottom:2px">JOINT LOAD</div>
+    <div id="hero-num">50%</div>
+    <div id="hero-zone">● GREEN</div>
+  </div>
+  <div class="hero-right">
+    <div id="hero-slider-lbl">◀ DRAG SLIDER TO SIMULATE LOAD ▶</div>
+    <input type="range" id="vslider" min="0" max="100" value="50" oninput="onSlider(this.value)"/>
+    <div class="slider-marks">
+      <span>0% STALL</span><span>25%</span><span>50% NORMAL</span><span>65% CAUTION</span><span>80% FAULT</span><span>100%</span>
+    </div>
+  </div>
+  <div class="hero-stats">
+    <div class="hstat">
+      <div class="hstat-val" id="h-temp" style="color:#e3b341">--°C</div>
+      <div class="hstat-lbl">MOTOR TEMP</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" id="h-trend" style="color:#56d364">→</div>
+      <div class="hstat-lbl">TREND</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" id="h-predict" style="color:#484f58">—</div>
+      <div class="hstat-lbl">TO FAULT</div>
+    </div>
+  </div>
+</div>
 
 <!-- ROI BAR -->
-<div id="roi-bar">
-  <div class="roi-stat">
-    <div class="roi-num" style="color:#f85149">$2.3M</div>
-    <div class="roi-lbl">COST PER HOUR</div>
-    <div class="roi-sub" style="color:#484f58">Automotive downtime (2024)</div>
-  </div>
-  <div class="roi-stat">
-    <div class="roi-num" style="color:#e3b341">$38K</div>
-    <div class="roi-lbl">AVG FAULT EVENT</div>
-    <div class="roi-sub" style="color:#484f58">UR10e repair + downtime</div>
-  </div>
-  <div class="roi-stat">
-    <div class="roi-num" style="color:#56d364">25–30%</div>
-    <div class="roi-lbl">MAINTENANCE SAVINGS</div>
-    <div class="roi-sub" style="color:#484f58">Predictive vs reactive</div>
-  </div>
-  <div class="roi-stat">
-    <div class="roi-num" style="color:#56d364">250%</div>
-    <div class="roi-lbl">AVG ROI</div>
-    <div class="roi-sub" style="color:#484f58">Payback in 12–18 months</div>
-  </div>
-  <div class="roi-stat">
-    <div class="roi-num" style="color:#58a6ff">$28.2B</div>
-    <div class="roi-lbl">MARKET SIZE 2030</div>
-    <div class="roi-sub" style="color:#484f58">Predictive maintenance sector</div>
-  </div>
-  <div class="roi-stat">
-    <div class="roi-num" style="color:#bc8cff" id="faults-prevented">0</div>
-    <div class="roi-lbl">FAULTS PREVENTED</div>
-    <div class="roi-sub" style="color:#484f58">This session</div>
-  </div>
-  <div id="savings-ticker">💰 SESSION SAVINGS: $0</div>
+<div id="roi">
+  <div class="roi-s"><div class="roi-n" style="color:#f85149">$2.3M</div><div class="roi-l">COST/HR DOWNTIME</div></div>
+  <div class="roi-s"><div class="roi-n" style="color:#e3b341">$38K</div><div class="roi-l">AVG FAULT EVENT</div></div>
+  <div class="roi-s"><div class="roi-n" style="color:#56d364">25–30%</div><div class="roi-l">MAINTENANCE SAVINGS</div></div>
+  <div class="roi-s"><div class="roi-n" style="color:#56d364">250%</div><div class="roi-l">AVG ROI</div></div>
+  <div class="roi-s"><div class="roi-n" style="color:#58a6ff">$28.2B</div><div class="roi-l">MARKET 2030</div></div>
+  <div class="roi-s"><div class="roi-n" id="r-prevented" style="color:#bc8cff">0</div><div class="roi-l">FAULTS PREVENTED</div></div>
+  <div class="roi-s"><div class="roi-n" id="r-savings" style="color:#56d364">$0</div><div class="roi-l">SESSION SAVINGS</div></div>
 </div>
 
-<!-- HERO LOAD DISPLAY -->
-<div id="hero-load">
-  <div>
-    <div id="hero-label">JOINT LOAD</div>
-    <div id="hero-num">50%</div>
-    <div id="hero-zone-badge">● GREEN</div>
-  </div>
-
-  <div id="hero-slider-wrap">
-    <div id="hero-slider-label">◀ DRAG TO SIMULATE LOAD ▶</div>
-    <input type="range" id="vslider" min="0" max="100" value="50" oninput="setLoad(this.value)" style="width:100%"/>
-    <div style="display:flex;justify-content:space-between;font-size:8px;color:#30363d">
-      <span>0% STALL</span><span>25% LOW</span><span>50% NOMINAL</span><span>65% CAUTION</span><span>80% FAULT</span><span>100%</span>
-    </div>
-  </div>
-
-  <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-    <div id="hero-temp-lbl">MOTOR TEMP</div>
-    <div id="hero-temp">--°C</div>
-  </div>
-
-  <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-    <div id="hero-trend" style="color:#56d364">→ STABLE</div>
-    <div id="hero-rate" style="font-size:10px;color:#484f58">+0.0%/cycle</div>
-  </div>
-
-  <div style="display:flex;flex-direction:column;gap:4px;min-width:120px">
-    <div style="font-size:8px;color:#484f58;letter-spacing:2px;margin-bottom:2px">ZONE BANDS</div>
-    <div style="font-size:9px"><span style="color:#56d364">■</span> <span style="color:#8b949e">GREEN  40–65%</span></div>
-    <div style="font-size:9px"><span style="color:#e3b341">■</span> <span style="color:#8b949e">AMBER  65–80%</span></div>
-    <div style="font-size:9px"><span style="color:#f85149">■</span> <span style="color:#8b949e">RED    >80% / <25%</span></div>
-  </div>
-</div>
-<div id="ew-panel">
-  <div style="font-size:9px;color:#484f58;letter-spacing:2px;flex-shrink:0">PREDICTIVE HORIZON</div>
-
-  <div class="ew-stage" id="ew-watch">
-    <div class="es-label">👁 WATCH</div>
-    <div class="es-val" id="ew-watch-val">—</div>
-    <div class="es-time" id="ew-watch-time">4+ hrs</div>
-  </div>
-  <div class="ew-stage" id="ew-advisory">
-    <div class="es-label">📋 ADVISORY</div>
-    <div class="es-val" id="ew-adv-val">—</div>
-    <div class="es-time" id="ew-adv-time">2–4 hrs</div>
-  </div>
-  <div class="ew-stage" id="ew-warning">
-    <div class="es-label">⚠ WARNING</div>
-    <div class="es-val" id="ew-warn-val">—</div>
-    <div class="es-time" id="ew-warn-time">1–2 hrs</div>
-  </div>
-  <div class="ew-stage" id="ew-critical">
-    <div class="es-label">🔴 CRITICAL</div>
-    <div class="es-val" id="ew-crit-val">—</div>
-    <div class="es-time" id="ew-crit-time">&lt;1 hr</div>
-  </div>
-
-  <div class="baseline-box">
-    <h4>BASELINE ANALYSIS</h4>
-    <div class="bb-row"><span class="bb-lbl">Baseline avg</span><span class="bb-val" id="bl-avg">—</span></div>
-    <div class="bb-row"><span class="bb-lbl">Current avg</span><span class="bb-val" id="bl-cur">—</span></div>
-    <div class="bb-row"><span class="bb-lbl">Drift</span><span class="bb-val" id="bl-drift">—</span></div>
-    <div class="bb-row"><span class="bb-lbl">Drift rate</span><span class="bb-val" id="bl-rate">—</span></div>
-  </div>
-
-  <div id="ew-summary" style="background:#080c11;border:1px solid #21262d;border-radius:6px;color:#484f58">
-    Establishing baseline... run system for 10 seconds.
-  </div>
-</div>
+<!-- MAIN BODY -->
 <div id="body">
 
-  <!-- COL 1: GAUGE -->
+  <!-- GAUGE -->
   <div class="panel" id="gauge-panel">
-    <div class="ptitle" style="width:100%"><div class="dot" style="background:#58a6ff"></div>JOINT LOAD</div>
-
+    <div class="ptitle"><div class="dot" style="background:#58a6ff"></div>JOINT LOAD</div>
     <div id="gauge-wrap">
-      <svg id="gsv" viewBox="0 0 150 150">
-        <path id="gbg"  d="" fill="none" stroke="#21262d" stroke-width="11" stroke-linecap="round"/>
-        <!-- Zone arcs -->
-        <path id="garc-red1"   d="" fill="none" stroke="#f8514944" stroke-width="11" stroke-linecap="round"/>
-        <path id="garc-amber1" d="" fill="none" stroke="#e3b34144" stroke-width="11" stroke-linecap="round"/>
-        <path id="garc-green"  d="" fill="none" stroke="#56d36444" stroke-width="11" stroke-linecap="round"/>
-        <path id="garc-amber2" d="" fill="none" stroke="#e3b34144" stroke-width="11" stroke-linecap="round"/>
-        <path id="garc-red2"   d="" fill="none" stroke="#f8514944" stroke-width="11" stroke-linecap="round"/>
-        <!-- Value arc on top -->
-        <path id="garc-val"    d="" fill="none" stroke="#56d364"   stroke-width="9"  stroke-linecap="round"/>
-      </svg>
-      <div id="gval">
-        <div id="gnum">50%</div>
-        <div id="glbl">JOINT LOAD</div>
-      </div>
+      <canvas id="gcanvas" width="150" height="150"></canvas>
+      <div id="gval"><div id="gnum">50%</div><div id="glbl">JOINT LOAD</div></div>
     </div>
-
-    <div class="zlabels">
-      <span style="color:#f85149">STALL</span>
-      <span style="color:#56d364">OK</span>
-      <span style="color:#f85149">OVER</span>
+    <div style="margin-top:8px;width:100%">
+      <div class="pbar-wrap"><div id="pbar"></div></div>
     </div>
-
-    <!-- Trend box -->
-    <div class="trend-box" style="margin-top:8px">
-      <div class="trow">
-        <span style="color:#484f58">TREND</span>
-        <span class="tval" id="trend-val" style="color:#56d364">→ STABLE</span>
-      </div>
-      <div class="trow">
-        <span style="color:#484f58">RATE</span>
-        <span class="tval" id="trend-rate" style="color:#484f58">+0%/min</span>
-      </div>
-      <div class="predict-bar">
-        <div class="predict-fill" id="pbar" style="width:50%;background:#56d364"></div>
-      </div>
-    </div>
-
-    <!-- Prediction card -->
-    <div id="predict-card">
-      <div id="predict-title">⚠ PREDICTIVE ALERT</div>
-      <div id="predict-msg">Load trending toward overload threshold</div>
-      <div id="predict-time">~-- min to fault</div>
+    <div style="margin-top:12px;font-size:9px">
+      <div class="sr"><span class="srlbl">Zone</span><span id="sv-zone" class="srval" style="color:#56d364">● GREEN</span></div>
+      <div class="sr"><span class="srlbl">Load</span><span id="sv-load" class="srval" style="color:#56d364">50%</span></div>
+      <div class="sr"><span class="srlbl">Relay</span><span id="sv-relay" class="srval" style="color:#56d364">CLOSED</span></div>
+      <div class="sr"><span class="srlbl">Motor</span><span id="sv-motor" class="srval" style="color:#56d364">RUNNING ▶</span></div>
+      <div class="sr"><span class="srlbl">Segment</span><span id="sv-seg" class="srval" style="color:#484f58">INACTIVE</span></div>
+      <div class="sr"><span class="srlbl">Trust</span><span id="sv-trust" class="srval" style="color:#56d364">VERIFIED</span></div>
     </div>
   </div>
 
-  <!-- COL 2: WAVEFORM -->
+  <!-- WAVEFORM -->
   <div class="panel" id="wave-panel">
-    <div class="ptitle"><div class="dot" style="background:#58a6ff"></div>LOAD HISTORY — ELBOW JOINT (REAL-TIME)</div>
+    <div class="ptitle"><div class="dot" style="background:#56d364"></div>LOAD WAVEFORM — LIVE</div>
     <canvas id="wcanvas"></canvas>
-    <div class="wave-legend">
-      <div class="wl"><div class="wl-line" style="background:#f85149"></div><span>OVERLOAD &gt;80%</span></div>
-      <div class="wl"><div class="wl-line" style="background:#e3b341"></div><span>CAUTION 65-80%</span></div>
-      <div class="wl"><div class="wl-line" style="background:#56d364"></div><span>NOMINAL 40-65%</span></div>
-      <div class="wl"><div class="wl-line" style="background:#e3b341;opacity:.6"></div><span>CAUTION 25-40%</span></div>
-      <div class="wl"><div class="wl-line" style="background:#f85149;opacity:.6"></div><span>STALL &lt;25%</span></div>
-      <div class="wl" style="margin-left:auto"><span style="color:#bc8cff">ZTA: Never trust — always verify</span></div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="panel" id="status-panel">
+    <div class="ptitle"><div class="dot" style="background:#56d364"></div>SYSTEM STATUS</div>
+    <div class="sr"><span class="srlbl">Baseline</span><span id="ss-baseline" class="srval" style="color:#484f58">Learning...</span></div>
+    <div class="sr"><span class="srlbl">Drift</span><span id="ss-drift" class="srval" style="color:#484f58">—</span></div>
+    <div class="sr"><span class="srlbl">Drift rate</span><span id="ss-rate" class="srval" style="color:#484f58">—</span></div>
+    <div class="sr"><span class="srlbl">Vibration</span><span id="ss-vib" class="srval" style="color:#484f58">—</span></div>
+
+    <div class="ptitle" style="margin-top:10px"><div class="dot" style="background:#e3b341"></div>EARLY WARNING</div>
+    <div class="sr"><span class="srlbl" style="color:#58a6ff">👁 WATCH</span><span id="ew-watch" class="srval" style="color:#484f58">—</span></div>
+    <div class="sr"><span class="srlbl" style="color:#bc8cff">📋 ADVISORY</span><span id="ew-adv" class="srval" style="color:#484f58">—</span></div>
+    <div class="sr"><span class="srlbl" style="color:#e3b341">⚠ WARNING</span><span id="ew-warn" class="srval" style="color:#484f58">—</span></div>
+    <div class="sr"><span class="srlbl" style="color:#f85149">🔴 CRITICAL</span><span id="ew-crit" class="srval" style="color:#484f58">—</span></div>
+
+    <div id="predict-card">
+      <div id="predict-msg"></div>
+      <div id="predict-time"></div>
     </div>
   </div>
 
-  <!-- COL 3 ROW 1: JOINT STATUS -->
-  <div class="panel" id="joint-panel">
-    <div class="ptitle"><div class="dot" id="status-dot" style="background:#56d364"></div>JOINT STATUS</div>
-
-    <div class="srow">
-      <span class="srlabel">ZONE</span>
-      <span class="srval" id="sv-zone" style="color:#56d364">● GREEN</span>
-    </div>
-    <div class="srow">
-      <span class="srlabel">RELAY</span>
-      <span class="srval" id="sv-relay" style="color:#56d364">CLOSED</span>
-    </div>
-    <div class="srow">
-      <span class="srlabel">MOTOR</span>
-      <span class="srval" id="sv-motor" style="color:#56d364">RUNNING ▶</span>
-    </div>
-    <div class="srow">
-      <span class="srlabel">MICRO-SEG</span>
-      <span class="srval" id="sv-seg" style="color:#484f58">INACTIVE</span>
-    </div>
-    <div class="srow">
-      <span class="srlabel">TRUST</span>
-      <span class="srval" id="sv-trust" style="color:#56d364">VERIFIED</span>
-    </div>
-    <div class="srow">
-      <span class="srlabel">LOAD</span>
-      <span class="srval" id="sv-load" style="color:#56d364">50%</span>
-    </div>
-  </div>
-
-  <!-- COL 3 ROW 2: ZTA AUTH -->
-  <div class="panel" id="auth-panel">
+  <!-- MFA -->
+  <div class="panel" id="mfa-panel">
     <div class="ptitle"><div class="dot" style="background:#bc8cff"></div>ZTA ACCESS CONTROL</div>
 
-    <div class="role-row" id="role-a">
-      <span class="rbadge" style="background:#56d36422;color:#56d364">A</span>
-      <div class="rinfo">
-        <div class="rname">Floor Worker</div>
-        <div class="rperms">Monitor only · No reset</div>
-      </div>
-      <span class="rstatus" id="ra-status" style="color:#484f58">IDLE</span>
-    </div>
-    <div class="role-row" id="role-b">
-      <span class="rbadge" style="background:#58a6ff22;color:#58a6ff">B</span>
-      <div class="rinfo">
-        <div class="rname">Maint. Tech</div>
-        <div class="rperms">Fault reset · PIN: 1234</div>
-      </div>
-      <span class="rstatus" id="rb-status" style="color:#484f58">IDLE</span>
-    </div>
-    <div class="role-row" id="role-c">
-      <span class="rbadge" style="background:#bc8cff22;color:#bc8cff">C</span>
-      <div class="rinfo">
-        <div class="rname">Engineer</div>
-        <div class="rperms">Full access · PIN: 9999</div>
-      </div>
-      <span class="rstatus" id="rc-status" style="color:#484f58">IDLE</span>
+    <div id="mfa-msg">System nominal — no auth required.</div>
+
+    <div style="margin-top:8px">
+      <div class="rfid-row"><span class="rfid-lbl">🟢 Card A — Floor Worker</span><span class="rfid-stat" id="ra-stat">IDLE</span></div>
+      <div class="rfid-row"><span class="rfid-lbl">🔵 Card B — Maint. Tech</span><span class="rfid-stat" id="rb-stat">IDLE</span></div>
+      <div class="rfid-row"><span class="rfid-lbl">🟣 Card C — Engineer</span><span class="rfid-stat" id="rc-stat">IDLE</span></div>
     </div>
 
-    <!-- MFA status -->
-    <div style="margin-top:6px;padding:8px;background:#080c11;border-radius:6px;border:1px solid #21262d">
-      <div style="font-size:9px;color:#484f58;margin-bottom:4px">MFA STATUS</div>
-      <div id="mfa-msg" style="font-size:10px;color:#484f58;line-height:1.5">System nominal — no auth required</div>
+    <div style="margin-top:8px;font-size:9px;color:#484f58;line-height:1.5">
+      PIN: Card B = 1234 · Card C = 9999<br>
+      Type PIN + Enter when prompted
     </div>
   </div>
 
 </div>
 
-<!-- FAULT LOG BAR -->
-<div id="log-panel">
-  <span style="font-size:9px;color:#484f58;flex-shrink:0">FAULT LOG</span>
-  <div id="log-scroll">
-    <span class="log-item" style="color:#484f58">No faults recorded</span>
-  </div>
+<!-- POKA-YOKE CHECKLIST -->
+<div id="poka-panel">
+  <div style="font-size:9px;color:#e3b341;letter-spacing:2px;flex-shrink:0">UR10e CHECKLIST:</div>
+  <div class="pstep" id="ps0"><div class="step-num">1</div>Workspace Clear</div>
+  <div class="pstep" id="ps1"><div class="step-num">2</div>Inspect Joint</div>
+  <div class="pstep" id="ps2"><div class="step-num">3</div>Check TCP</div>
+  <div class="pstep" id="ps3"><div class="step-num">4</div>Review Log</div>
+  <div class="pstep" id="ps4"><div class="step-num">5</div>Clear Hazard</div>
+  <div style="font-size:9px;color:#484f58;margin-left:8px">Press 1–5 to confirm each step</div>
 </div>
 
 <!-- CONTROLS -->
-
-<!-- POKA-YOKE RECOVERY CHECKLIST (UR10e Manual Procedure) -->
-<div id="poka-panel">
-  <div style="flex-shrink:0">
-    <div style="font-size:9px;color:#e3b341;letter-spacing:2px;margin-bottom:8px">📋 UR10e MANUAL — RECOVERY CHECKLIST</div>
-    <div class="poka-steps" id="poka-steps">
-      <div class="pstep pending" id="ps0"><div class="step-num" style="background:#21262d">1</div>Workspace Clear</div>
-      <div class="pstep pending" id="ps1"><div class="step-num" style="background:#21262d">2</div>Inspect Joint</div>
-      <div class="pstep pending" id="ps2"><div class="step-num" style="background:#21262d">3</div>Check Payload/TCP</div>
-      <div class="pstep pending" id="ps3"><div class="step-num" style="background:#21262d">4</div>Review Fault Log</div>
-      <div class="pstep pending" id="ps4"><div class="step-num" style="background:#21262d">5</div>Clear Hazard</div>
-    </div>
-  </div>
-  <div class="poka-info">
-    <h4>CURRENT STEP</h4>
-    <div id="poka-current">Waiting for technician authentication...</div>
-    <div id="poka-errors"></div>
-  </div>
-  <div class="error-counter">
-    <div class="enum" id="err-count" style="color:#56d364">0</div>
-    <div class="elbl">HUMAN ERRORS</div>
-  </div>
-  <div class="error-counter" style="margin-left:0">
-    <div class="enum" id="skip-count" style="color:#56d364">0</div>
-    <div class="elbl">SKIPS/WRONG</div>
-  </div>
-</div>
 <div id="controls">
-  <span>LOAD:</span>
-  <span id="vdisp" style="font-size:10px;color:#484f58">Manual slider ↑</span>
-  <button class="cbtn amber" onclick="simAmber()">⚠ CAUTION</button>
-  <button class="cbtn red"   onclick="simOverload()">🔴 OVERLOAD</button>
-  <button class="cbtn red"   onclick="simStall()">📉 STALL</button>
-  <button class="cbtn" onclick="simGearWear()" style="border-color:#e3b341;color:#e3b341">⚙ GEAR WEAR</button>
-  <button class="cbtn" onclick="simVibration()" style="border-color:#bc8cff;color:#bc8cff">〰 VIBRATION</button>
-  <button class="cbtn" onclick="simThermal()" style="border-color:#f85149;color:#f85149">🌡 OVERHEAT</button>
-  <button class="cbtn" onclick="simCableSnag()" style="border-color:#58a6ff;color:#58a6ff">🔌 CABLE SNAG</button>
-  <button class="cbtn" onclick="simUnauthorized()" style="border-color:#f85149;color:#f85149">🚨 INTRUSION</button>
+  <span style="font-size:8px;color:#484f58;letter-spacing:1px">SIMULATE:</span>
+  <button class="cbtn amber" onclick="simRun('caution',   72, 'SCENARIO: Motor load high — caution zone')">⚠ CAUTION</button>
+  <button class="cbtn red"   onclick="simRun('overload',  88, 'SCENARIO: Motor overloaded — fault imminent')">🔴 OVERLOAD</button>
+  <button class="cbtn red"   onclick="simRun('stall',     12, 'SCENARIO: Motor stall — no rotation detected')">📉 STALL</button>
+  <button class="cbtn"       onclick="simGearWear()"  style="border-color:#e3b341;color:#e3b341">⚙ GEAR WEAR</button>
+  <button class="cbtn"       onclick="simVibration()" style="border-color:#bc8cff;color:#bc8cff">〰 VIBRATION</button>
+  <button class="cbtn"       onclick="simThermal()"   style="border-color:#f85149;color:#f85149">🌡 OVERHEAT</button>
+  <button class="cbtn"       onclick="simCableSnag()" style="border-color:#58a6ff;color:#58a6ff">🔌 CABLE SNAG</button>
+  <button class="cbtn red"   onclick="simIntrusion()">🚨 INTRUSION</button>
+  <span style="font-size:8px;color:#484f58;letter-spacing:1px;margin-left:4px">MFA:</span>
   <button class="cbtn"       onclick="scanCard('A')">🪪 Card A</button>
   <button class="cbtn blue"  onclick="scanCard('B')">🪪 Card B</button>
   <button class="cbtn"       onclick="scanCard('C')" style="border-color:#bc8cff;color:#bc8cff">🪪 Card C</button>
   <button class="cbtn blue"  onclick="autoDemo()">▶ AUTO DEMO</button>
-  <button class="cbtn red"   onclick="hardReset()">⟳ RESET</button>
+  <button class="cbtn green" onclick="doReset()">⟳ RESET</button>
+  <button class="cbtn"       onclick="toggleMaint()">🔧 MAINTENANCE</button>
 </div>
 
-<script>
-// ── STATE ────────────────────────────────────────────────────
-let load = 50;           // 0–100 %
-let zone = 'GREEN';      // GREEN AMBER_LOW AMBER_HIGH RED
-let jointDown = false;
-let trend = 0;
-let minsToFault = -1;
-const history = new Array(300).fill(50);
-const HISTORY = 60;
-const loadSamples = new Array(HISTORY).fill(50);
-let sampleIdx = 0;
-let faults = [];
-let authState = 'IDLE';  // IDLE AWAIT_RFID AWAIT_PIN
-let currentCard = null;
-let pin = '';
-
-// ── GAUGE ARCS ───────────────────────────────────────────────
-function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};}
-function arc(cx,cy,r,s,e){
-  if(e<=s) return '';
-  const p=polar(cx,cy,r,s),q=polar(cx,cy,r,e),l=(e-s)>180?1:0;
-  return `M${p.x} ${p.y}A${r} ${r}0 ${l}1${q.x}${q.y}`;
-}
-const R=58, CX=75, CY=75, START=135, TOTAL=270;
-function pctToDeg(p){return START+(p/100)*TOTAL;}
-
-// Draw zone bands (static)
-document.getElementById('gbg').setAttribute('d', arc(CX,CY,R,START,START+TOTAL));
-document.getElementById('garc-red1').setAttribute('d',   arc(CX,CY,R,START,         pctToDeg(25)));
-document.getElementById('garc-amber1').setAttribute('d', arc(CX,CY,R,pctToDeg(25),  pctToDeg(40)));
-document.getElementById('garc-green').setAttribute('d',  arc(CX,CY,R,pctToDeg(40),  pctToDeg(65)));
-document.getElementById('garc-amber2').setAttribute('d', arc(CX,CY,R,pctToDeg(65),  pctToDeg(80)));
-document.getElementById('garc-red2').setAttribute('d',   arc(CX,CY,R,pctToDeg(80),  START+TOTAL));
-
-function updateGauge(v) {
-  const endDeg = pctToDeg(Math.min(Math.max(v,0),100));
-  document.getElementById('garc-val').setAttribute('d', arc(CX,CY,R,START,Math.max(START+1,endDeg)));
-  const c = v>=80||v<=25?'#f85149':v>=65||v<=40?'#e3b341':'#56d364';
-  document.getElementById('garc-val').setAttribute('stroke',c);
-  document.getElementById('gnum').style.color=c;
-  document.getElementById('gnum').textContent=Math.round(v)+'%';
-}
-
-// ── WAVEFORM ─────────────────────────────────────────────────
-const canvas = document.getElementById('wcanvas');
-const ctx = canvas.getContext('2d');
-
-function drawWave(){
-  const W=canvas.offsetWidth, H=canvas.offsetHeight;
-  canvas.width=W; canvas.height=H;
-  ctx.fillStyle='#080c11'; ctx.fillRect(0,0,W,H);
-
-  // Zone bands background
-  const zones=[
-    [0,25,'#f8514908'],[25,40,'#e3b34108'],[40,65,'#56d36408'],
-    [65,80,'#e3b34108'],[80,100,'#f8514908']
-  ];
-  zones.forEach(([lo,hi,col])=>{
-    const y1=H-(hi/100)*H, y2=H-(lo/100)*H;
-    ctx.fillStyle=col; ctx.fillRect(0,y1,W,y2-y1);
-  });
-
-  // Threshold lines
-  [[25,'#f8514966'],[40,'#e3b34166'],[65,'#e3b34166'],[80,'#f8514966']].forEach(([pct,col])=>{
-    const y=H-(pct/100)*H;
-    ctx.strokeStyle=col; ctx.lineWidth=1; ctx.setLineDash([5,4]);
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-  });
-  ctx.setLineDash([]);
-
-  // Grid
-  ctx.strokeStyle='#161b22'; ctx.lineWidth=0.4;
-  for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,H*i/4);ctx.lineTo(W,H*i/4);ctx.stroke();}
-
-  // Waveform — colour per zone
-  ctx.lineWidth=2;
-  history.forEach((v,i)=>{
-    if(i===0) return;
-    const x=(i/history.length)*W, px=((i-1)/history.length)*W;
-    const y=H-(v/100)*H, py=H-(history[i-1]/100)*H;
-    const c=v>=80||v<=25?'#f85149':v>=65||v<=40?'#e3b341':'#56d364';
-    ctx.strokeStyle=c; ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(x,y); ctx.stroke();
-  });
-
-  // Trend line (last 30 samples projected forward)
-  if(trend > 2) {
-    const lastX=W, lastY=H-(load/100)*H;
-    const projPct=Math.min(100,load+trend*15);
-    const projY=H-(projPct/100)*H;
-    ctx.strokeStyle='#e3b34188'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
-    ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(lastX+60,projY); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-}
-
-// ── TREND CALC ───────────────────────────────────────────────
-function calcTrend(){
-  const recent=loadSamples.slice(-5).reduce((a,b)=>a+b,0)/5;
-  const older=loadSamples.slice(0,5).reduce((a,b)=>a+b,0)/5;
-  return recent-older;
-}
-
-function estimateMins(t,v){
-  if(t<=0.5) return -1;
-  const distToFault=80-v;
-  if(distToFault<=0) return 0;
-  const samplesPerMin=200;
-  return Math.max(1,Math.round((distToFault/t)*0.3));
-}
-
-// ── ZONE LOGIC ───────────────────────────────────────────────
-function getZone(v){
-  if(v>=80||v<=25) return 'RED';
-  if(v>=65||v<=40) return 'AMBER';
-  return 'GREEN';
-}
-
-function applyZone(v){
-  const newZone=getZone(v);
-  if(newZone==='RED' && !jointDown){ triggerFault(v>=80?'OVERLOAD':'STALL'); return; }
-  // Amber entry = fault prevented (caught before red)
-  if(newZone==='AMBER' && zone==='GREEN') { recordFaultPrevented(); }
-  zone=newZone;
-  updateStatusPanel(v,newZone);
-  updatePrediction();
-}
-
-function updateStatusPanel(v,z){
-  const c=z==='RED'?'#f85149':z==='AMBER'?'#e3b341':'#56d364';
-  document.getElementById('status-dot').style.background=c;
-
-  const badge=document.getElementById('hbadge');
-  if(z==='GREEN'){badge.className='hbadge green-b';badge.textContent='● NOMINAL';}
-  else if(z==='AMBER'){badge.className='hbadge amber-b';badge.textContent='⚠ CAUTION';}
-
-  document.getElementById('sv-zone').style.color=c;
-  document.getElementById('sv-zone').textContent=z==='GREEN'?'● GREEN':z==='AMBER'?'▲ AMBER':'● RED';
-  document.getElementById('sv-load').style.color=c;
-  document.getElementById('sv-load').textContent=Math.round(v)+'%';
-  // Hero display
-  const heroNum = document.getElementById('hero-num');
-  const heroBadge = document.getElementById('hero-zone-badge');
-  const heroTrend = document.getElementById('hero-trend');
-  const heroRate  = document.getElementById('hero-rate');
-  if(heroNum){
-    heroNum.textContent = Math.round(v)+'%';
-    heroNum.style.color = c;
-  }
-  if(heroBadge){
-    heroBadge.textContent = z==='GREEN'?'● GREEN':z==='AMBER'?'▲ AMBER':'■ FAULT';
-    heroBadge.style.color = c;
-    heroBadge.style.borderColor = c;
-    heroBadge.style.background = c+'22';
-  }
-  const tStr=trend>8?'▲▲ RISING FAST':trend>3?'▲ RISING':trend<-8?'▼▼ FALLING':trend<-3?'▼ FALLING':'→ STABLE';
-  const tCol=trend>8?'#f85149':trend>3?'#e3b341':trend<-3?'#58a6ff':'#56d364';
-  if(heroTrend){ heroTrend.textContent=tStr; heroTrend.style.color=tCol; }
-  if(heroRate){ heroRate.textContent=(trend>0?'+':'')+trend.toFixed(1)+'%/cycle'; heroRate.style.color=tCol; }
-
-  // Trend display
-  const tStr=trend>8?'▲▲ RISING FAST':trend>3?'▲ RISING':trend<-8?'▼▼ FALLING':trend<-3?'▼ FALLING':'→ STABLE';
-  const tCol=trend>8?'#f85149':trend>3?'#e3b341':trend<-3?'#58a6ff':'#56d364';
-  document.getElementById('trend-val').textContent=tStr;
-  document.getElementById('trend-val').style.color=tCol;
-  document.getElementById('trend-rate').textContent=(trend>0?'+':'')+trend.toFixed(1)+'%/cycle';
-  document.getElementById('trend-rate').style.color=tCol;
-
-  // Progress bar
-  const pbar=document.getElementById('pbar');
-  pbar.style.width=Math.round(v)+'%';
-  pbar.style.background=c;
-}
-
-function updatePrediction(){
-  trend=calcTrend();
-  minsToFault=estimateMins(trend,load);
-  const card=document.getElementById('predict-card');
-  if(trend>3 && load>50 && !jointDown){
-    card.classList.add('show');
-    card.classList.add('pulsing');
-    document.getElementById('predict-msg').textContent=
-      `Load trending ▲ at +${trend.toFixed(1)}% per cycle. Schedule maintenance now.`;
-    document.getElementById('predict-time').textContent=
-      minsToFault>0?`~${minsToFault} min to fault`:'Fault imminent';
-  } else {
-    card.classList.remove('show','pulsing');
-  }
-}
-
-// ── FAULT / RESET ────────────────────────────────────────────
-function triggerFault(type){
-  zone='RED'; jointDown=true;
-  const ts=new Date().toLocaleTimeString();
-  faults.unshift(ts+' — '+type+' FAULT');
-  renderLog();
-
-  document.getElementById('hbadge').className='hbadge red-b';
-  document.getElementById('hbadge').textContent='⚠ FAULT';
-  document.getElementById('sv-zone').textContent='● RED — FAULT';
-  document.getElementById('sv-zone').style.color='#f85149';
-  document.getElementById('sv-relay').textContent='OPEN ○';
-  document.getElementById('sv-relay').style.color='#f85149';
-  document.getElementById('sv-motor').textContent='STOPPED ■';
-  document.getElementById('sv-motor').style.color='#f85149';
-  document.getElementById('sv-seg').textContent='ACTIVE';
-  document.getElementById('sv-seg').style.color='#f85149';
-  document.getElementById('sv-trust').textContent='REVOKED';
-  document.getElementById('sv-trust').style.color='#f85149';
-
-  authState='AWAIT_RFID';
-  document.getElementById('mfa-msg').textContent='⚠ Grid locked. Scan RFID badge to begin MFA.';
-  document.getElementById('mfa-msg').style.color='#f85149';
-}
-
-function restoreJoint(){
-  jointDown=false; zone='GREEN'; authState='IDLE';
-  currentCard=null; pin='';
-  const ts=new Date().toLocaleTimeString();
-  faults.unshift(ts+' — RESET OK by Card '+currentCard);
-  renderLog();
-
-  document.getElementById('hbadge').className='hbadge green-b';
-  document.getElementById('hbadge').textContent='● NOMINAL';
-  document.getElementById('sv-relay').textContent='CLOSED'; document.getElementById('sv-relay').style.color='#56d364';
-  document.getElementById('sv-motor').textContent='RUNNING ▶'; document.getElementById('sv-motor').style.color='#56d364';
-  document.getElementById('sv-seg').textContent='INACTIVE'; document.getElementById('sv-seg').style.color='#484f58';
-  document.getElementById('sv-trust').textContent='VERIFIED'; document.getElementById('sv-trust').style.color='#56d364';
-  document.getElementById('mfa-msg').textContent='System nominal — no auth required';
-  document.getElementById('mfa-msg').style.color='#484f58';
-  ['a','b','c'].forEach(r=>{
-    document.getElementById('r'+r+'-status').textContent='IDLE';
-    document.getElementById('r'+r+'-status').style.color='#484f58';
-  });
-  document.getElementById('predict-card').classList.remove('show');
-}
-
-// ── RFID / MFA ────────────────────────────────────────────────
-function scanCard(c){
-  const ts=new Date().toLocaleTimeString();
-  const labels={A:'Floor Worker',B:'Maint. Tech',C:'Engineer'};
-  const colors={A:'#56d364',B:'#58a6ff',C:'#bc8cff'};
-  const ids={A:'ra',B:'rb',C:'rc'};
-
-  document.getElementById(ids[c]+'-status').textContent='SCANNED';
-  document.getElementById(ids[c]+'-status').style.color=colors[c];
-
-  if(authState==='IDLE'){
-    document.getElementById('mfa-msg').textContent='Card '+c+' ('+labels[c]+') scanned — system nominal, no action needed.';
-    document.getElementById('mfa-msg').style.color=colors[c];
-    return;
-  }
-  if(authState!=='AWAIT_RFID') return;
-
-  currentCard=c;
-  if(c==='A'){
-    document.getElementById('mfa-msg').textContent='🚫 ACCESS DENIED\nCard A has no reset clearance.\nCall maintenance tech.';
-    document.getElementById('mfa-msg').style.color='#f85149';
-    document.getElementById('ra-status').textContent='DENIED';
-    faults.unshift(ts+' — Card A denied (insufficient privilege)');
-    renderLog();
-  } else {
-    authState='AWAIT_PIN';
-    document.getElementById('mfa-msg').textContent='✓ Badge verified (Factor 1)\nType PIN in chat:\n  Card B = 1234 | Card C = 9999';
-    document.getElementById('mfa-msg').style.color='#58a6ff';
-    document.getElementById(ids[c]+'-status').textContent='AWAITING PIN';
-  }
-}
-
-// Allow typing PIN directly in browser for demo
-document.addEventListener('keydown',e=>{
-  if(authState!=='AWAIT_PIN') return;
-  if(e.key>='0'&&e.key<='9'&&pin.length<4) pin+=e.key;
-  if(e.key==='Backspace') pin=pin.slice(0,-1);
-  if(e.key==='Enter'){
-    const correct=currentCard==='B'?'1234':'9999';
-    const ts=new Date().toLocaleTimeString();
-    if(pin===correct){
-      document.getElementById('mfa-msg').textContent='✅ TRUST VERIFIED: JOINT RESET\nBoth factors confirmed.';
-      document.getElementById('mfa-msg').style.color='#56d364';
-      faults.unshift(ts+' — Auth OK by Card '+currentCard);
-      renderLog();
-      setTimeout(()=>restoreJoint(),1500);
-    } else {
-      document.getElementById('mfa-msg').textContent='❌ Wrong PIN — try again';
-      document.getElementById('mfa-msg').style.color='#f85149';
-      pin='';
-    }
-  }
-  document.getElementById('mfa-msg').textContent=
-    authState==='AWAIT_PIN'?`Factor 1 ✓ | PIN: ${'●'.repeat(pin.length).padEnd(4,'_')} (press Enter)`:
-    document.getElementById('mfa-msg').textContent;
-});
-
-// ── LOG ──────────────────────────────────────────────────────
-function renderLog(){
-  if(!faults.length){return;}
-  document.getElementById('log-scroll').innerHTML=faults.slice(0,8).map(f=>`
-    <span class="log-item" style="color:${f.includes('OK')?'#56d364':f.includes('denied')||f.includes('Wrong')?'#e3b341':'#f85149'}">${f}</span>
-  `).join('');
-}
-
-// ── CONTROLS ─────────────────────────────────────────────────
-function setLoad(v){
-  if(jointDown) return;
-  load=parseFloat(v);
-  document.getElementById('vdisp').textContent=Math.round(v)+'%';
-}
-// ── HELPER: set load + update hero immediately ───────────────
-function pushLoad(v){
-  v = Math.max(0, Math.min(100, v));
-  load = v;
-  const sl = document.getElementById('vslider');
-  const vd = document.getElementById('vdisp');
-  const hn = document.getElementById('hero-num');
-  if(sl) sl.value = Math.round(v);
-  if(vd) vd.textContent = Math.round(v)+'%';
-  // hero num colour
-  const c = v>=80?'#f85149':v>=65?'#e3b341':'#56d364';
-  if(hn){ hn.textContent=Math.round(v)+'%'; hn.style.color=c; }
-}
-
-// ── HELPER: clean start for every sim ────────────────────────
-function simStart(msg){
-  demoRunning = false; // let hardReset clear cleanly
-  if(vibTimer){ clearInterval(vibTimer); vibTimer=null; }
-  hardReset();
-  demoRunning = true;
-  const el = document.getElementById('mfa-msg');
-  if(el){ el.textContent = msg; el.style.color='#bc8cff'; }
-}
-
-function simAmber(){
-  simStart('SCENARIO: Caution zone — motor running hot');
-  setTimeout(()=>pushLoad(72), 100);
-}
-function simOverload(){
-  simStart('SCENARIO: Overload — joint exceeding max current');
-  setTimeout(()=>pushLoad(88), 100);
-}
-function simStall(){
-  simStart('SCENARIO: Stall — motor blocked, no rotation');
-  setTimeout(()=>pushLoad(12), 100);
-}
-function hardReset(){
-  demoRunning=false;
-  if(vibTimer){clearInterval(vibTimer);vibTimer=null;}
-  load=50;
-  document.getElementById('vslider').value=50;
-  document.getElementById('vdisp').textContent='50%';
-  restoreJoint();
-}
-
-let demoRunning=false;
-function autoDemo(){
-  if(demoRunning) return;
-  hardReset();
-  setTimeout(()=>{
-    demoRunning=true;
-    const steps=[
-      [0,     ()=>{ document.getElementById('mfa-msg').textContent='▶ AUTO DEMO — Watch the full fault cycle'; document.getElementById('mfa-msg').style.color='#58a6ff'; }],
-      [1000,  ()=>{ document.getElementById('vslider').value=58; setLoad(58); }],
-      [3000,  ()=>{ document.getElementById('vslider').value=68; setLoad(68); }],
-      [5000,  ()=>{ document.getElementById('vslider').value=75; setLoad(75); }],
-      [8000,  ()=>{ document.getElementById('vslider').value=86; setLoad(86); }],
-      [10000, ()=>scanCard('A')],
-      [12500, ()=>scanCard('B')],
-      [14500, ()=>submitPin('1234')],
-      [16000, ()=>confirmPokaStep('1')],
-      [17000, ()=>confirmPokaStep('2')],
-      [18000, ()=>confirmPokaStep('3')],
-      [19000, ()=>confirmPokaStep('4')],
-      [20000, ()=>confirmPokaStep('5')],
-      [22000, ()=>{ demoRunning=false; document.getElementById('mfa-msg').textContent='✅ DEMO COMPLETE — Joint restored'; document.getElementById('mfa-msg').style.color='#56d364'; }],
-    ];
-    steps.forEach(([t,fn])=>setTimeout(fn,t));
-  },200);
-}
-
-
-
-
-// Direct PIN submit for demo (bypasses keyboard event listener)
-function submitPin(p){
-  if(authState!=='AWAIT_PIN') return;
-  pin = p;
-  const correct = currentCard==='B'?'1234':'9999';
-  const ts = new Date().toLocaleTimeString();
-  if(pin===correct){
-    authState='POKA';
-    document.getElementById('mfa-msg').textContent='✅ Factor 2 verified — Begin safety checklist';
-    document.getElementById('mfa-msg').style.color='#56d364';
-    faults.unshift(ts+' — Auth OK by Card '+currentCard);
-    renderLog();
-    setTimeout(()=>startPokaYoke(),500);
-  } else {
-    document.getElementById('mfa-msg').textContent='❌ Wrong PIN';
-    document.getElementById('mfa-msg').style.color='#f85149';
-    pin='';
-  }
-}
-
-// ── ROI TRACKER ───────────────────────────────────────────────
-let faultsPrevented = 0;
-let sessionSavings  = 0;
-const COST_PER_FAULT = 38000; // avg UR10e fault event cost
-
-function recordFaultPrevented() {
-  faultsPrevented++;
-  sessionSavings = faultsPrevented * COST_PER_FAULT;
-  document.getElementById('faults-prevented').textContent = faultsPrevented;
-  const formatted = sessionSavings >= 1000000
-    ? '$' + (sessionSavings/1000000).toFixed(2) + 'M'
-    : '$' + sessionSavings.toLocaleString();
-  document.getElementById('savings-ticker').textContent = '💰 SESSION SAVINGS: ' + formatted;
-  document.getElementById('savings-ticker').style.color = '#56d364';
-}
-
-// Call this when amber alert fires (fault was caught early = prevented)
-function checkAmberSavings(v) {
-  static_prev = checkAmberSavings.prev || 'GREEN';
-  const newZone = getZone(v);
-  if(static_prev === 'GREEN' && newZone === 'AMBER') {
-    // Caught it in amber = fault prevented
-    recordFaultPrevented();
-  }
-  checkAmberSavings.prev = newZone;
-}
-
-// ── SIMULATION SCENARIOS ──────────────────────────────────────
-
-// 1. GEAR WEAR — gradual load creep over time (predictive)
-function simGearWear(){
-  if(demoRunning) return;
-  simStart('SCENARIO: Gear wear — watch load creep up slowly');
-  let v=50;
-  const t=setInterval(()=>{
-    if(jointDown){clearInterval(t);demoRunning=false;return;}
-    v += 1.2 + (Math.random()*0.8);
-    pushLoad(v);
-    if(v>=80){clearInterval(t);demoRunning=false;}
-  },400);
-}
-
-// 2. VIBRATION FAULT
-let vibTimer=null;
-function simVibration(){
-  if(demoRunning) return;
-  simStart('SCENARIO: Loose bolt — erratic load spikes');
-  let base=52, cycle=0;
-  vibTimer=setInterval(()=>{
-    if(jointDown){clearInterval(vibTimer);demoRunning=false;return;}
-    cycle++;
-    const spike = cycle%8===0 ? base+30+(Math.random()*20) : base+(Math.random()-0.5)*8;
-    pushLoad(spike);
-  },250);
-}
-
-// 3. THERMAL OVERLOAD
-function simThermal(){
-  if(demoRunning) return;
-  simStart('SCENARIO: Thermal overload — motor temp rising');
-  let v=50, phase=0;
-  const t=setInterval(()=>{
-    if(jointDown){clearInterval(t);demoRunning=false;return;}
-    phase++;
-    if(phase<10)      v+=2;
-    else if(phase<20) v+=0.3;
-    else              v+=3;
-    pushLoad(v);
-  },500);
-}
-
-// 4. CABLE SNAG
-function simCableSnag(){
-  if(demoRunning) return;
-  simStart('SCENARIO: External cable dragging on joint');
-  const seq=[50,52,68,55,71,59,74,57,82];
-  let i=0;
-  const t=setInterval(()=>{
-    if(jointDown||i>=seq.length){clearInterval(t);demoRunning=false;return;}
-    pushLoad(seq[i++]);
-  },800);
-}
-
-// 5. UNAUTHORIZED INTRUSION — someone tries to reset without auth
-function simUnauthorized(){
-  if(jointDown) {
-    // Try to bypass — scan wrong card repeatedly
-    document.getElementById('mfa-msg').textContent='🚨 INTRUSION: Unauthorized reset attempt detected!';
-    document.getElementById('mfa-msg').style.color='#f85149';
-    const ts=new Date().toLocaleTimeString();
-    faults.unshift(ts+' — 🚨 INTRUSION: unauthorized reset attempt');
-    renderLog();
-    // Simulate 3 wrong badge scans
-    setTimeout(()=>scanCard('A'),500);
-    setTimeout(()=>scanCard('A'),2000);
-    setTimeout(()=>scanCard('A'),3500);
-    setTimeout(()=>{
-      document.getElementById('mfa-msg').textContent='🔒 3 failed attempts — Supervisor notified. Joint remains locked.';
-      document.getElementById('mfa-msg').style.color='#f85149';
-      faults.unshift(ts+' — LOCKOUT: 3 unauthorized attempts. Alert sent.');
-      renderLog();
-    },4500);
-  } else {
-    // No fault active — show what would happen
-    document.getElementById('mfa-msg').textContent='Trigger a fault first, then try INTRUSION to see lockout';
-    document.getElementById('mfa-msg').style.color='#484f58';
-  }
-}
-
-
-// ══════════════════════════════════════════════════════════════
-// PREDICTIVE MAINTENANCE ENGINE — HOURS-AHEAD FAULT DETECTION
-// Based on: baseline drift + degradation rate + MTBF projection
-// ══════════════════════════════════════════════════════════════
-
-const BASELINE_SAMPLES  = 100;   // samples to establish baseline
-const LONG_HISTORY      = 500;   // longer rolling window
-const FAULT_THRESHOLD   = 80;    // % load = red zone
-
-// Stage thresholds (% drift from baseline)
-const WATCH_DRIFT    = 5;   // +5% above baseline
-const ADVISORY_DRIFT = 10;  // +10%
-const WARNING_DRIFT  = 15;  // +15%
-const CRITICAL_DRIFT = 20;  // +20% — fault imminent
-
-let baselineBuffer   = [];
-let baselineAvg      = null;
-let baselineStdDev   = null;
-let baselineLocked   = false;
-let longHistory      = new Array(LONG_HISTORY).fill(50);
-let driftHistory     = [];       // track drift over time
-let degradationRate  = 0;        // % drift per minute
-let currentStage     = 'NORMAL'; // NORMAL WATCH ADVISORY WARNING CRITICAL
-let stageEntryTime   = {};       // when each stage was entered
-let hoursToFault     = null;
-
-function updateBaseline(v) {
-  if(baselineLocked) return;
-  baselineBuffer.push(v);
-  if(baselineBuffer.length >= BASELINE_SAMPLES) {
-    const sum = baselineBuffer.reduce((a,b)=>a+b,0);
-    baselineAvg = sum / baselineBuffer.length;
-    const variance = baselineBuffer.reduce((a,b)=>a+(b-baselineAvg)**2,0)/baselineBuffer.length;
-    baselineStdDev = Math.sqrt(variance);
-    baselineLocked = true;
-    console.log('Baseline locked:', baselineAvg.toFixed(1), '±', baselineStdDev.toFixed(1));
-  }
-}
-
-function calcDegradationRate() {
-  if(driftHistory.length < 10) return 0;
-  // Linear regression on drift over time
-  const n = driftHistory.length;
-  const recent = driftHistory.slice(-20); // last 20 drift readings
-  const older  = driftHistory.slice(0, 20);
-  const recentAvg = recent.reduce((a,b)=>a+b,0)/recent.length;
-  const olderAvg  = older.reduce((a,b)=>a+b,0)/older.length;
-  // Each sample ≈ 100ms → 20 samples ≈ 2 seconds
-  // Rate per minute = (recentAvg - olderAvg) / 2s * 60s
-  const rate = (recentAvg - olderAvg) / 2 * 60;
-  return Math.max(0, rate);
-}
-
-function estimateHoursToFault(currentPct, ratePerMin) {
-  if(ratePerMin <= 0.01) return null; // stable
-  const distToFault = FAULT_THRESHOLD - currentPct;
-  if(distToFault <= 0) return 0;
-  const minsLeft = distToFault / ratePerMin;
-  return minsLeft / 60; // convert to hours
-}
-
-function getEarlyWarningStage(drift, hrs) {
-  if(drift >= CRITICAL_DRIFT || (hrs !== null && hrs < 1)) return 'CRITICAL';
-  if(drift >= WARNING_DRIFT  || (hrs !== null && hrs < 2)) return 'WARNING';
-  if(drift >= ADVISORY_DRIFT || (hrs !== null && hrs < 4)) return 'ADVISORY';
-  if(drift >= WATCH_DRIFT    || (hrs !== null && hrs < 8)) return 'WATCH';
-  return 'NORMAL';
-}
-
-function updateEarlyWarningPanel(v) {
-  const now = Date.now();
-  if(now - ewLastUpdate < EW_UPDATE_MS) return;
-  ewLastUpdate = now;
-
-  if(!baselineLocked) {
-    const pct = Math.round((baselineBuffer.length / BASELINE_SAMPLES) * 100);
-    document.getElementById('ew-summary').textContent =
-      'Establishing baseline... '+pct+'% ('+baselineBuffer.length+'/'+BASELINE_SAMPLES+' samples)';
-    document.getElementById('ew-summary').style.color = '#484f58';
-    return;
-  }
-
-  const rawDrift = ((v - baselineAvg) / baselineAvg) * 100;
-  ewSmoothedDrift = ewSmoothedDrift * 0.85 + rawDrift * 0.15;
-
-  driftHistory.push(ewSmoothedDrift);
-  if(driftHistory.length > 200) driftHistory.shift();
-
-  const rawRate = calcDegradationRate();
-  ewSmoothedRate = ewSmoothedRate * 0.92 + rawRate * 0.08;
-  degradationRate = ewSmoothedRate;
-
-  const rawHrs = estimateHoursToFault(v, ewSmoothedRate);
-  if(rawHrs !== null) {
-    ewSmoothedHrs = ewSmoothedHrs === null ? rawHrs : ewSmoothedHrs * 0.85 + rawHrs * 0.15;
-  } else {
-    ewSmoothedHrs = null;
-  }
-  hoursToFault = ewSmoothedHrs;
-
-  const stage = getEarlyWarningStage(ewSmoothedDrift, hoursToFault);
-
-  // Only update CSS classes when stage actually changes — stops flicker
-  if(stage !== ewLastStage) {
-    const stages = ['watch','advisory','warning','critical'];
-    const stageMap = { WATCH:0, ADVISORY:1, WARNING:2, CRITICAL:3 };
-    const activeIdx = stageMap[stage] ?? -1;
-    stages.forEach((s,i) => {
-      const el = document.getElementById('ew-'+s);
-      const c = 'ew-stage'+(i<activeIdx?' passed':i===activeIdx?' active-'+s:'');
-      if(el.className !== c) el.className = c;
-    });
-    ewLastStage = stage;
-  }
-
-  // Baseline box
-  document.getElementById('bl-avg').textContent = baselineAvg.toFixed(1)+'%';
-  document.getElementById('bl-avg').style.color = '#56d364';
-  document.getElementById('bl-cur').textContent = v.toFixed(1)+'%';
-  document.getElementById('bl-cur').style.color = ewSmoothedDrift>WATCH_DRIFT?'#e3b341':'#56d364';
-  const dc = ewSmoothedDrift>=CRITICAL_DRIFT?'#f85149':ewSmoothedDrift>=WARNING_DRIFT?'#e3b341':ewSmoothedDrift>=WATCH_DRIFT?'#bc8cff':'#56d364';
-  document.getElementById('bl-drift').textContent = (ewSmoothedDrift>0?'+':'')+ewSmoothedDrift.toFixed(1)+'%';
-  document.getElementById('bl-drift').style.color = dc;
-  document.getElementById('bl-rate').textContent  = ewSmoothedRate>0.01?'+'+ewSmoothedRate.toFixed(2)+'%/min':'stable';
-  document.getElementById('bl-rate').style.color  = ewSmoothedRate>0.5?'#e3b341':'#56d364';
-
-  // Hours string — rounded to 1 decimal to stop constant updates
-  const h = hoursToFault;
-  const hrsStr = h===null?'—':h>24?'>24 hrs':h>1?(Math.round(h*10)/10)+' hrs':(Math.round(h*60))+' min';
-
-  // Stage values — only set if changed
-  function setIfChanged(id, val) {
-    const el = document.getElementById(id);
-    if(el && el.textContent !== val) el.textContent = val;
-  }
-  setIfChanged('ew-watch-val',  ewSmoothedDrift>=WATCH_DRIFT    ? '+'+ewSmoothedDrift.toFixed(1)+'%' : '—');
-  setIfChanged('ew-adv-val',    ewSmoothedDrift>=ADVISORY_DRIFT ? '+'+ewSmoothedDrift.toFixed(1)+'%' : '—');
-  setIfChanged('ew-warn-val',   ewSmoothedDrift>=WARNING_DRIFT  ? '+'+ewSmoothedDrift.toFixed(1)+'%' : '—');
-  setIfChanged('ew-crit-val',   ewSmoothedDrift>=CRITICAL_DRIFT ? '+'+ewSmoothedDrift.toFixed(1)+'%' : '—');
-
-  if(h !== null) {
-    setIfChanged('ew-crit-time',  hrsStr+' to fault');
-    setIfChanged('ew-warn-time',  h>1?(Math.round((h+1)*10)/10)+' hrs':'imminent');
-    setIfChanged('ew-adv-time',   h>2?(Math.round((h+2)*10)/10)+' hrs':'<2 hrs');
-    setIfChanged('ew-watch-time', h>4?(Math.round((h+3)*10)/10)+' hrs':'<4 hrs');
-  }
-
-  // Summary — only update on stage change
-  if(stage !== currentStage) {
-    const sumEl = document.getElementById('ew-summary');
-    const msgs = {
-      NORMAL:   ['#56d364','#56d36409','✅ Joint healthy — load within baseline. No action required.'],
-      WATCH:    ['#58a6ff','#58a6ff09','👁 WATCH: Load drifting above baseline. Monitor next 30 min.'],
-      ADVISORY: ['#bc8cff','#bc8cff09','📋 ADVISORY: Degradation confirmed. Schedule maintenance at next downtime. Est. '+hrsStr+' before fault.'],
-      WARNING:  ['#e3b341','#e3b34109','⚠ WARNING: Alert maintenance NOW. Est. '+hrsStr+' remaining.'],
-      CRITICAL: ['#f85149','#f8514909','🔴 CRITICAL: Fault in ~'+hrsStr+'. Dispatch tech immediately.'],
-    };
-    const [col,bg,msg] = msgs[stage]||msgs.NORMAL;
-    sumEl.style.color = col;
-    sumEl.style.borderColor = col+'44';
-    sumEl.style.background = bg;
-    sumEl.textContent = msg;
-  }
-
-  currentStage = stage;
-}
-
-// Hook into main animation loop
-const _origLoop = loop;
-
-
-// ══════════════════════════════════════════════════════════════
-// MAINTENANCE TRACKER + MTBF ENGINE
-// ══════════════════════════════════════════════════════════════
-
-// Part specs: typical UR10e service intervals (days)
-const PART_SPECS = {
-  motor:   { name:'Motor',       typicalLife:365, replacementLife:1825, cost:4200 },
-  gear:    { name:'Gears',       typicalLife:180, replacementLife:900,  cost:2800 },
-  bearing: { name:'Bearings',    typicalLife:270, replacementLife:1095, cost:850  },
-  joint:   { name:'Joint Seal',  typicalLife:90,  replacementLife:365,  cost:320  },
-  cable:   { name:'Cables',      typicalLife:365, replacementLife:1825, cost:600  },
-};
-
-let maintEvents   = [];  // {date, part, type, tech, timestamp}
-let partLastService = { motor:null, gear:null, bearing:null, joint:null, cable:null };
-let partHealth      = { motor:100,  gear:100,  bearing:100,  joint:100,  cable:100  };
-
-// Set today's date as default in date picker
-window.addEventListener('load', ()=>{
-  const d = document.getElementById('maint-date');
-  if(d) d.value = new Date().toISOString().split('T')[0];
-});
-
-function logMaintenance(){
-  const part  = document.getElementById('maint-part').value;
-  const type  = document.getElementById('maint-type').value;
-  const date  = document.getElementById('maint-date').value;
-  const tech  = document.getElementById('maint-tech').value || 'Unknown';
-
-  if(!date){ alert('Please select a date'); return; }
-
-  const event = { part, type, tech, date, timestamp: new Date(date).getTime() };
-  maintEvents.push(event);
-  maintEvents.sort((a,b)=>b.timestamp-a.timestamp); // newest first
-
-  // Update last service for this part
-  if(!partLastService[part] || event.timestamp > new Date(partLastService[part]).getTime()){
-    partLastService[part] = date;
-  }
-
-  // If replacement — reset health fully
-  if(type === 'replacement') partHealth[part] = 100;
-
-  renderMaintLog();
-  updatePartsTable();
-  updateMTBFSummary();
-}
-
-function daysSince(dateStr){
-  if(!dateStr) return null;
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-}
-
-function calcPartHealth(part){
-  const spec = PART_SPECS[part];
-  const last = partLastService[part];
-  if(!last) return 100; // never serviced = assume new
-
-  const days = daysSince(last);
-  // Base decay from time
-  let health = Math.max(0, 100 - (days / spec.typicalLife) * 100);
-
-  // Additional decay from current load drift (sensor data)
-  if(baselineLocked && smoothDrift > 5){
-    health -= (smoothDrift - 5) * 0.5; // drift accelerates wear
-  }
-
-  return Math.max(0, Math.min(100, health));
-}
-
-function healthStatus(h){
-  if(h >= 70) return ['ps-good','GOOD'];
-  if(h >= 35) return ['ps-warn','SERVICE SOON'];
-  return ['ps-crit','CRITICAL'];
-}
-
-function daysToDate(days){
-  const d = new Date(Date.now() + days * 86400000);
-  return d.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
-}
-
-function updatePartsTable(){
-  Object.keys(PART_SPECS).forEach(part => {
-    const row = document.getElementById('pr-'+part);
-    if(!row) return;
-    const spec  = PART_SPECS[part];
-    const last  = partLastService[part];
-    const days  = daysSince(last);
-    const h     = calcPartHealth(part);
-    const daysLeft = last ? Math.max(0, spec.typicalLife - days) : spec.typicalLife;
-    const [cls,lbl] = healthStatus(h);
-
-    row.querySelector('.pr-date').textContent = last || 'Never';
-    row.querySelector('.pr-date').style.color = last ? '#8b949e' : '#484f58';
-    row.querySelector('.pr-life').textContent = last
-      ? daysLeft+'d left (~'+daysToDate(daysLeft)+')'
-      : 'Est. '+spec.typicalLife+'d from first service';
-    row.querySelector('.pr-life').style.color = daysLeft<30?'#f85149':daysLeft<60?'#e3b341':'#56d364';
-    row.querySelector('.health-bar').style.width = h.toFixed(0)+'%';
-    row.querySelector('.health-bar').style.background = h>=70?'#56d364':h>=35?'#e3b341':'#f85149';
-    row.querySelector('.part-status').className = 'part-status '+cls;
-    row.querySelector('.part-status').textContent = lbl;
-  });
-}
-
-function updateMTBFSummary(){
-  // Find most critical part
-  let minHealth = 100, critPart = null, nextDue = Infinity, nextPart = null;
-  let totalCostToPrevent = 0;
-
-  Object.keys(PART_SPECS).forEach(part => {
-    const h = calcPartHealth(part);
-    const spec = PART_SPECS[part];
-    const last = partLastService[part];
-    const days = daysSince(last) || 0;
-    const daysLeft = Math.max(0, spec.typicalLife - days);
-
-    if(h < minHealth){ minHealth = h; critPart = part; }
-    if(daysLeft < nextDue){ nextDue = daysLeft; nextPart = part; }
-    if(h < 70) totalCostToPrevent += spec.cost * (1 - h/100);
-  });
-
-  // MTBF from logged events
-  const failures = maintEvents.filter(e=>e.type==='replacement');
-  let mtbfStr = '—';
-  if(failures.length >= 2){
-    const intervals = [];
-    for(let i=1;i<failures.length;i++){
-      intervals.push((failures[i-1].timestamp - failures[i].timestamp)/86400000);
-    }
-    const avg = intervals.reduce((a,b)=>a+b,0)/intervals.length;
-    mtbfStr = Math.round(avg)+' days';
-  } else if(failures.length === 1){
-    mtbfStr = 'Need more data (1 event)';
-  }
-
-  document.getElementById('mtbf-avg').textContent      = mtbfStr;
-  document.getElementById('mtbf-critical').textContent  = critPart ? PART_SPECS[critPart].name+' ('+minHealth.toFixed(0)+'% health)' : '—';
-  document.getElementById('mtbf-next').textContent      = nextPart ? PART_SPECS[nextPart].name+' in '+nextDue+'d ('+daysToDate(nextDue)+')' : '—';
-  document.getElementById('mtbf-cost').textContent      = totalCostToPrevent>0?'$'+Math.round(totalCostToPrevent).toLocaleString()+' planned vs $38K unplanned':'All parts healthy';
-}
-
-function renderMaintLog(){
-  const el = document.getElementById('maint-log-list');
-  if(!maintEvents.length){ el.innerHTML='<div style="color:#30363d;font-size:9px">No events logged</div>'; return; }
-  el.innerHTML = maintEvents.slice(0,8).map(e=>`
-    <div class="maint-log-item">
-      <span class="ml-date">${e.date}</span> —
-      <span class="ml-part">${PART_SPECS[e.part].name}</span>
-      <span style="color:#56d364">[${e.type}]</span>
-      <span style="color:#484f58">by ${e.tech}</span>
-    </div>
-  `).join('');
-}
-
-// Load demo data for presentation
-function loadDemoMaintData(){
-  const demoData = [
-    { part:'motor',   type:'inspection',   date:'2025-12-01', tech:'Chen' },
-    { part:'gear',    type:'lubrication',  date:'2025-11-15', tech:'Rodriguez' },
-    { part:'bearing', type:'replacement',  date:'2025-09-20', tech:'Chen' },
-    { part:'bearing', type:'replacement',  date:'2025-03-10', tech:'Singh' },
-    { part:'joint',   type:'replacement',  date:'2025-10-05', tech:'Rodriguez' },
-    { part:'cable',   type:'inspection',   date:'2025-12-15', tech:'Singh' },
-    { part:'gear',    type:'replacement',  date:'2025-06-30', tech:'Chen' },
-  ];
-  demoData.forEach(e=>{
-    maintEvents.push({...e, timestamp: new Date(e.date).getTime()});
-    if(!partLastService[e.part] || new Date(e.date) > new Date(partLastService[e.part])){
-      partLastService[e.part] = e.date;
-    }
-  });
-  maintEvents.sort((a,b)=>b.timestamp-a.timestamp);
-  renderMaintLog();
-  updatePartsTable();
-  updateMTBFSummary();
-}
-
-// Auto-load demo data on start
-window.addEventListener('load', ()=>{ setTimeout(loadDemoMaintData, 500); });
-
-// Update parts table every 5s based on live drift
-setInterval(()=>{ if(baselineLocked){ updatePartsTable(); updateMTBFSummary(); } }, 5000);
-
-// ── ANIMATION LOOP ────────────────────────────────────────────
-function loop(){
-  // Scroll history
-  history.shift();
-  const noisy = jointDown ? load : load + (Math.random()-.5)*2;
-  history.push(Math.max(0,Math.min(100,noisy)));
-
-  // Update load samples for trend
-  loadSamples[sampleIdx%HISTORY]=noisy;
-  sampleIdx++;
-  trend=calcTrend();
-
-  updateGauge(noisy);
-  drawWave();
-  updateBaseline(noisy);
-  longHistory.shift(); longHistory.push(noisy);
-  updateEarlyWarningPanel(noisy);
-  // Update hero temp display
-  const htEl = document.getElementById('hero-temp');
-  if(htEl && baselineLocked){
-    const fakeTemp = 22 + (noisy * 0.3);
-    htEl.textContent = fakeTemp.toFixed(0)+'°C';
-    htEl.style.color = fakeTemp>40?'#f85149':fakeTemp>35?'#e3b341':'#56d364';
-  }
-
-  if(!jointDown) applyZone(noisy);
-
-  requestAnimationFrame(loop);
-}
-loop();
-
-// ── POKA-YOKE STATE ───────────────────────────────────────────
-const STEPS = [
-  { label:'Workspace Clear',   desc:'Confirm all operators are outside the robot workspace. No obstacles in joint path.',            key:'1' },
-  { label:'Inspect Joint',     desc:'Visually inspect elbow joint — no cracks, loose bolts, or debris. Check for heat damage.',     key:'2' },
-  { label:'Check Payload/TCP', desc:'Verify Tool Center Point and payload settings match installation. Incorrect TCP = repeat fault.','key':'3' },
-  { label:'Review Fault Log',  desc:'Read the fault log. Identify ROOT CAUSE before reset. Never auto-acknowledge a protective stop.', key:'4' },
-  { label:'Clear Hazard',      desc:'Confirm the cause is resolved — not just acknowledged. Resetting without fixing = human error.', key:'5' },
-];
-let pokaStep = -1;  // -1 = not started
-let pokaErrors = 0;
-let pokaSkips = 0;
-let pokaActive = false;
-
-function startPokaYoke() {
-  pokaStep = 0;
-  pokaErrors = 0;
-  pokaSkips = 0;
-  pokaActive = true;
-  document.getElementById('poka-panel').classList.add('show');
-  // Reset all steps to pending
-  STEPS.forEach((_,i) => {
-    const el = document.getElementById('ps'+i);
-    el.className = 'pstep ' + (i===0 ? 'active' : 'pending');
-    el.querySelector('.step-num').style.background = i===0 ? '#e3b341' : '#21262d';
-  });
-  updatePokaDisplay();
-}
-
-function updatePokaDisplay() {
-  if(pokaStep >= STEPS.length) return;
-  const s = STEPS[pokaStep];
-  document.getElementById('poka-current').innerHTML =
-    `<b style="color:#e3b341">Step ${pokaStep+1}/5: ${s.label}</b><br>
-     <span style="color:#8b949e;font-size:10px">${s.desc}</span><br>
-     <span style="color:#58a6ff;margin-top:4px;display:block">Press <b>${s.key}</b> to confirm ↵</span>`;
-  document.getElementById('err-count').textContent = pokaErrors;
-  document.getElementById('skip-count').textContent = pokaSkips;
-  const errEl = document.getElementById('poka-errors');
-  if(pokaErrors > 0 || pokaSkips > 0) {
-    errEl.innerHTML = `⚠ ${pokaErrors} error(s) — ${pokaSkips} skip attempt(s) logged`;
-    errEl.style.color = pokaErrors > 2 ? '#f85149' : '#e3b341';
-  }
-}
-
-function confirmPokaStep(key) {
-  if(!pokaActive || pokaStep >= STEPS.length) return;
-  const expected = STEPS[pokaStep].key;
-
-  if(key === expected) {
-    // Mark current step done
-    const el = document.getElementById('ps'+pokaStep);
-    el.className = 'pstep done';
-    el.querySelector('.step-num').style.background = '#56d364';
-    pokaStep++;
-
-    if(pokaStep >= STEPS.length) {
-      // All done — allow reset
-      document.getElementById('poka-current').innerHTML =
-        '<b style="color:#56d364">✅ ALL STEPS VERIFIED</b><br>' +
-        '<span style="color:#8b949e">Joint cleared for reset.<br>' +
-        `${pokaErrors} human error(s) logged this incident.</span>`;
-      document.getElementById('mfa-msg').textContent = '✅ Poka-Yoke complete. Resetting joint...';
-      document.getElementById('mfa-msg').style.color = '#56d364';
-      const ts = new Date().toLocaleTimeString();
-      faults.unshift(ts+' — Reset OK · '+pokaErrors+' errors logged');
-      renderLog();
-      pokaActive = false;
-      setTimeout(() => { restoreJoint(); document.getElementById('poka-panel').classList.remove('show'); }, 2000);
-    } else {
-      // Advance to next step
-      const next = document.getElementById('ps'+pokaStep);
-      next.className = 'pstep active';
-      next.querySelector('.step-num').style.background = '#e3b341';
-      updatePokaDisplay();
-    }
-
-  } else if(key === '*') {
-    // Attempted skip
-    pokaSkips++;
-    pokaErrors++;
-    document.getElementById('ps'+pokaStep).classList.add('error');
-    setTimeout(() => {
-      document.getElementById('ps'+pokaStep).className='pstep active';
-      document.getElementById('ps'+pokaStep).querySelector('.step-num').style.background='#e3b341';
-    }, 800);
-    document.getElementById('poka-errors').textContent = '🚫 CANNOT SKIP — step ' + (pokaStep+1) + ' is mandatory';
-    document.getElementById('poka-errors').style.color = '#f85149';
-    const ts = new Date().toLocaleTimeString();
-    faults.unshift(ts+' — ⚠ Human error: tried to skip step '+(pokaStep+1));
-    renderLog(); updatePokaDisplay();
-  } else {
-    // Wrong key
-    pokaErrors++;
-    document.getElementById('ps'+pokaStep).classList.add('error');
-    setTimeout(() => {
-      document.getElementById('ps'+pokaStep).className='pstep active';
-    }, 800);
-    updatePokaDisplay();
-  }
-}
-
-// Allow keyboard for demo — number keys confirm steps
-document.addEventListener('keydown', e => {
-  if(pokaActive && e.key >= '1' && e.key <= '5') { confirmPokaStep(e.key); return; }
-  if(pokaActive && e.key === '*') { confirmPokaStep('*'); return; }
-  // Existing PIN handler
-  if(authState!=='AWAIT_PIN') return;
-  if(e.key>='0'&&e.key<='9'&&pin.length<4) pin+=e.key;
-  if(e.key==='Backspace') pin=pin.slice(0,-1);
-  if(e.key==='Enter'){
-    const correct=currentCard==='B'?'1234':'9999';
-    const ts=new Date().toLocaleTimeString();
-    if(pin===correct){
-      document.getElementById('mfa-msg').textContent='✓ PIN verified — Starting safety checklist...';
-      document.getElementById('mfa-msg').style.color='#56d364';
-      faults.unshift(ts+' — Auth OK by Card '+currentCard);
-      renderLog();
-      authState='POKA';
-      setTimeout(() => startPokaYoke(), 1000);
-    } else {
-      document.getElementById('mfa-msg').textContent='❌ Wrong PIN — try again';
-      document.getElementById('mfa-msg').style.color='#f85149';
-      pin='';
-    }
-  }
-  if(authState==='AWAIT_PIN')
-    document.getElementById('mfa-msg').textContent=
-      `Factor 1 ✓ | PIN: ${'●'.repeat(pin.length).padEnd(4,'_')} (Enter to confirm)`;
-});
-
-// Update autoDemo to go through poka-yoke too
-// duplicate autoDemo removed
-
-</script>
-
-<!-- MAINTENANCE TRACKER PANEL -->
+<!-- FAULT LOG -->
+<div id="log-bar">
+  <span id="log-lbl">FAULT LOG</span>
+  <div id="log-scroll"><span style="color:#30363d;font-size:8px">No events</span></div>
+</div>
+
+<!-- MAINTENANCE PANEL -->
 <div id="maint-panel">
-  <h3>🔧 MAINTENANCE HISTORY & PART LIFE ESTIMATION</h3>
+  <div style="font-size:9px;color:#484f58;letter-spacing:3px">🔧 MAINTENANCE HISTORY &amp; PART LIFE ESTIMATION</div>
   <div class="maint-grid">
-
-    <!-- LEFT: Input + Log -->
-    <div class="maint-col">
+    <div class="mcol">
       <h4>LOG MAINTENANCE EVENT</h4>
-      <div class="maint-form">
-        <div class="maint-row">
-          <select class="maint-sel" id="maint-part">
-            <option value="motor">Motor (Drive)</option>
-            <option value="gear">Gear Assembly</option>
-            <option value="bearing">Bearings</option>
-            <option value="joint">Joint Seal</option>
-            <option value="cable">Cable Harness</option>
-          </select>
-          <select class="maint-sel" id="maint-type">
-            <option value="inspection">Inspection</option>
-            <option value="lubrication">Lubrication</option>
-            <option value="replacement">Full Replacement</option>
-            <option value="adjustment">Adjustment</option>
-            <option value="cleaning">Cleaning</option>
-          </select>
-        </div>
-        <div class="maint-row">
-          <input class="maint-input" type="date" id="maint-date"/>
-          <input class="maint-input" type="text" id="maint-tech" placeholder="Tech name" style="max-width:100px"/>
-          <button class="maint-btn" onclick="logMaintenance()">+ LOG</button>
-        </div>
+      <div class="mrow">
+        <select class="msel" id="m-part">
+          <option value="motor">Motor</option>
+          <option value="gear">Gear Assembly</option>
+          <option value="bearing">Bearings</option>
+          <option value="joint">Joint Seal</option>
+          <option value="cable">Cable Harness</option>
+        </select>
+        <select class="msel" id="m-type">
+          <option value="inspection">Inspection</option>
+          <option value="lubrication">Lubrication</option>
+          <option value="replacement">Replacement</option>
+          <option value="adjustment">Adjustment</option>
+        </select>
       </div>
-
-      <div style="margin-top:10px">
-        <div style="font-size:9px;color:#484f58;letter-spacing:2px;margin-bottom:4px">RECENT EVENTS</div>
-        <div class="maint-log-list" id="maint-log-list">
-          <div style="color:#30363d;font-size:9px">No events logged yet</div>
-        </div>
+      <div class="mrow">
+        <input class="minput" type="date" id="m-date"/>
+        <input class="minput" type="text" id="m-tech" placeholder="Tech name" style="max-width:110px"/>
+        <button class="mbtn" onclick="logMaint()">+ LOG</button>
       </div>
-
+      <div class="mlog" id="mlog"></div>
       <div class="mtbf-box">
-        <div style="font-size:9px;color:#484f58;letter-spacing:1px;margin-bottom:6px">FLEET MTBF SUMMARY</div>
-        <div class="mtbf-row"><span class="mtbf-lbl">Avg time between failures</span><span class="mtbf-val" id="mtbf-avg">—</span></div>
-        <div class="mtbf-row"><span class="mtbf-lbl">Most critical part</span><span class="mtbf-val" id="mtbf-critical" style="color:#f85149">—</span></div>
-        <div class="mtbf-row"><span class="mtbf-lbl">Next service due</span><span class="mtbf-val" id="mtbf-next" style="color:#e3b341">—</span></div>
-        <div class="mtbf-row"><span class="mtbf-lbl">Estimated cost to prevent</span><span class="mtbf-val" id="mtbf-cost" style="color:#56d364">—</span></div>
+        <div style="font-size:9px;color:#484f58;letter-spacing:1px;margin-bottom:6px">MTBF SUMMARY</div>
+        <div class="mtbf-row"><span style="color:#484f58">Avg time between failures</span><span style="font-weight:700" id="mt-avg">—</span></div>
+        <div class="mtbf-row"><span style="color:#484f58">Most critical part</span><span style="font-weight:700;color:#f85149" id="mt-crit">—</span></div>
+        <div class="mtbf-row"><span style="color:#484f58">Next service due</span><span style="font-weight:700;color:#e3b341" id="mt-next">—</span></div>
+        <div class="mtbf-row"><span style="color:#484f58">Planned vs unplanned</span><span style="font-weight:700;color:#56d364" id="mt-cost">—</span></div>
       </div>
     </div>
-
-    <!-- RIGHT: Parts Health Table -->
-    <div class="maint-col">
+    <div class="mcol">
       <h4>PART LIFE ESTIMATION</h4>
-      <table class="parts-table" id="parts-table">
-        <tr>
-          <th>PART</th>
-          <th>LAST SERVICE</th>
-          <th>EST. LIFE LEFT</th>
-          <th>HEALTH</th>
-          <th>STATUS</th>
-        </tr>
-        <tr id="pr-motor">
-          <td style="color:#e6edf3">Motor</td>
-          <td class="pr-date" style="color:#484f58">Never</td>
-          <td class="pr-life">—</td>
-          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
-          <td><span class="part-status ps-good">GOOD</span></td>
-        </tr>
-        <tr id="pr-gear">
-          <td style="color:#e6edf3">Gears</td>
-          <td class="pr-date" style="color:#484f58">Never</td>
-          <td class="pr-life">—</td>
-          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
-          <td><span class="part-status ps-good">GOOD</span></td>
-        </tr>
-        <tr id="pr-bearing">
-          <td style="color:#e6edf3">Bearings</td>
-          <td class="pr-date" style="color:#484f58">Never</td>
-          <td class="pr-life">—</td>
-          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
-          <td><span class="part-status ps-good">GOOD</span></td>
-        </tr>
-        <tr id="pr-joint">
-          <td style="color:#e6edf3">Joint Seal</td>
-          <td class="pr-date" style="color:#484f58">Never</td>
-          <td class="pr-life">—</td>
-          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
-          <td><span class="part-status ps-good">GOOD</span></td>
-        </tr>
-        <tr id="pr-cable">
-          <td style="color:#e6edf3">Cables</td>
-          <td class="pr-date" style="color:#484f58">Never</td>
-          <td class="pr-life">—</td>
-          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
-          <td><span class="part-status ps-good">GOOD</span></td>
-        </tr>
+      <table class="parts-tbl">
+        <tr><th>PART</th><th>LAST SERVICE</th><th>DAYS LEFT</th><th>HEALTH</th><th>STATUS</th></tr>
+        <tr id="pr-motor"><td style="color:#e6edf3">Motor</td><td class="pr-d" style="color:#484f58">Never</td><td class="pr-l" style="color:#484f58">—</td><td><div class="hbar-wrap"><div class="hbar" style="width:100%;background:#56d364"></div></div></td><td><span class="ps ps-good">GOOD</span></td></tr>
+        <tr id="pr-gear"><td style="color:#e6edf3">Gears</td><td class="pr-d" style="color:#484f58">Never</td><td class="pr-l" style="color:#484f58">—</td><td><div class="hbar-wrap"><div class="hbar" style="width:100%;background:#56d364"></div></div></td><td><span class="ps ps-good">GOOD</span></td></tr>
+        <tr id="pr-bearing"><td style="color:#e6edf3">Bearings</td><td class="pr-d" style="color:#484f58">Never</td><td class="pr-l" style="color:#484f58">—</td><td><div class="hbar-wrap"><div class="hbar" style="width:100%;background:#56d364"></div></div></td><td><span class="ps ps-good">GOOD</span></td></tr>
+        <tr id="pr-joint"><td style="color:#e6edf3">Joint Seal</td><td class="pr-d" style="color:#484f58">Never</td><td class="pr-l" style="color:#484f58">—</td><td><div class="hbar-wrap"><div class="hbar" style="width:100%;background:#56d364"></div></div></td><td><span class="ps ps-good">GOOD</span></td></tr>
+        <tr id="pr-cable"><td style="color:#e6edf3">Cables</td><td class="pr-d" style="color:#484f58">Never</td><td class="pr-l" style="color:#484f58">—</td><td><div class="hbar-wrap"><div class="hbar" style="width:100%;background:#56d364"></div></div></td><td><span class="ps ps-good">GOOD</span></td></tr>
       </table>
-
-      <div style="font-size:8px;color:#484f58;margin-top:8px;line-height:1.6">
-        * Life estimates based on UR10e manufacturer specs + logged maintenance intervals.<br>
-        * Health decays from current drift analysis + days since last service.
-      </div>
     </div>
   </div>
 </div>
 
+<script>
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let load       = 50;
+let jointDown  = false;
+let zone       = 'GREEN';
+let authState  = 'IDLE';   // IDLE | AWAIT_RFID | AWAIT_PIN | POKA
+let currentCard= null;
+let pin        = '';
+let faults     = [];
+
+// Waveform
+const HIST = 200;
+let waveData   = new Array(HIST).fill(50);
+
+// Baseline
+const BL_N     = 80;
+let blBuf      = [];
+let blAvg      = null;
+let blLocked   = false;
+
+// Trend
+let prevLoad   = 50;
+let trend      = 0;
+let driftH     = [];
+let smoothRate = 0;
+
+// Poka-Yoke
+let pokaStep   = 0;
+let pokaActive = false;
+
+// Demo
+let demoTimer  = null;
+let simTimer   = null;
+let demoRunning= false;
+
+// ROI
+let prevented  = 0;
+let prevZone   = 'GREEN';
+
+// Maintenance
+const PARTS = {
+  motor:   {name:'Motor',      life:365, cost:4200},
+  gear:    {name:'Gears',      life:180, cost:2800},
+  bearing: {name:'Bearings',   life:270, cost:850 },
+  joint:   {name:'Joint Seal', life:90,  cost:320 },
+  cable:   {name:'Cables',     life:365, cost:600 },
+};
+let maintLog   = [];
+let lastService= {motor:null,gear:null,bearing:null,joint:null,cable:null};
+
+// ══════════════════════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════════════════════
+setInterval(()=>{
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+},1000);
+
+// ══════════════════════════════════════════════════════
+// SLIDER
+// ══════════════════════════════════════════════════════
+function onSlider(v){
+  if(jointDown) return;
+  load = parseFloat(v);
+}
+
+// ══════════════════════════════════════════════════════
+// ZONE LOGIC
+// ══════════════════════════════════════════════════════
+function getZone(v){
+  if(v >= 80 || v <= 20) return 'RED';
+  if(v >= 65 || v <= 30) return 'AMBER';
+  return 'GREEN';
+}
+const ZONE_COL = {GREEN:'#56d364', AMBER:'#e3b341', RED:'#f85149'};
+
+// ══════════════════════════════════════════════════════
+// RESET
+// ══════════════════════════════════════════════════════
+function doReset(){
+  // Kill all running sims/demos
+  if(simTimer){clearInterval(simTimer);simTimer=null;}
+  if(demoTimer){clearTimeout(demoTimer);demoTimer=null;}
+  demoRunning = false;
+  pokaActive  = false;
+  pokaStep    = 0;
+
+  load       = 50;
+  jointDown  = false;
+  zone       = 'GREEN';
+  authState  = 'IDLE';
+  currentCard= null;
+  pin        = '';
+
+  document.getElementById('vslider').value = 50;
+  document.getElementById('poka-panel').classList.remove('show');
+  ['ps0','ps1','ps2','ps3','ps4'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.className='pstep';
+    el.querySelector('.step-num').style.background='#21262d';
+  });
+
+  setStatus('GREEN', 50);
+  setMsg('System reset — nominal.', '#484f58');
+  ['ra-stat','rb-stat','rc-stat'].forEach(id=>{
+    document.getElementById(id).textContent='IDLE';
+    document.getElementById(id).style.color='#484f58';
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// UPDATE UI
+// ══════════════════════════════════════════════════════
+function setStatus(z, v){
+  const c = ZONE_COL[z];
+
+  // Hero
+  document.getElementById('hero-num').textContent  = Math.round(v)+'%';
+  document.getElementById('hero-num').style.color  = c;
+  document.getElementById('hero-zone').textContent = z==='GREEN'?'● GREEN':z==='AMBER'?'▲ AMBER':'■ FAULT';
+  document.getElementById('hero-zone').style.color      = c;
+  document.getElementById('hero-zone').style.borderColor= c;
+  document.getElementById('hero-zone').style.background = c+'22';
+
+  // Badge
+  const badge = document.getElementById('hbadge');
+  if(z==='GREEN'){badge.className='hbadge green-b';badge.textContent='● NOMINAL';}
+  else if(z==='AMBER'){badge.className='hbadge amber-b';badge.textContent='⚠ CAUTION';}
+  else{badge.className='hbadge red-b';badge.textContent='⚠ FAULT';}
+
+  // Gauge
+  document.getElementById('gnum').textContent = Math.round(v)+'%';
+  document.getElementById('gnum').style.color = c;
+  document.getElementById('pbar').style.width = Math.round(v)+'%';
+  document.getElementById('pbar').style.background = c;
+
+  // Status panel
+  document.getElementById('sv-zone').textContent  = z==='GREEN'?'● GREEN':z==='AMBER'?'▲ AMBER':'● RED';
+  document.getElementById('sv-zone').style.color  = c;
+  document.getElementById('sv-load').textContent  = Math.round(v)+'%';
+  document.getElementById('sv-load').style.color  = c;
+
+  if(jointDown){
+    document.getElementById('sv-relay').textContent='OPEN ○';document.getElementById('sv-relay').style.color='#f85149';
+    document.getElementById('sv-motor').textContent='STOPPED ■';document.getElementById('sv-motor').style.color='#f85149';
+    document.getElementById('sv-seg').textContent='ACTIVE';document.getElementById('sv-seg').style.color='#f85149';
+    document.getElementById('sv-trust').textContent='REVOKED';document.getElementById('sv-trust').style.color='#f85149';
+  } else {
+    document.getElementById('sv-relay').textContent='CLOSED';document.getElementById('sv-relay').style.color='#56d364';
+    document.getElementById('sv-motor').textContent='RUNNING ▶';document.getElementById('sv-motor').style.color='#56d364';
+    document.getElementById('sv-seg').textContent='INACTIVE';document.getElementById('sv-seg').style.color='#484f58';
+    document.getElementById('sv-trust').textContent='VERIFIED';document.getElementById('sv-trust').style.color='#56d364';
+  }
+
+  zone = z;
+}
+
+function setMsg(txt, col){
+  const el = document.getElementById('mfa-msg');
+  el.textContent = txt;
+  el.style.color = col || '#8b949e';
+}
+
+function addLog(txt, col){
+  const ts = new Date().toLocaleTimeString();
+  faults.unshift(ts+' — '+txt);
+  const scroll = document.getElementById('log-scroll');
+  scroll.innerHTML = faults.slice(0,10).map((f,i)=>`
+    <span class="log-item" style="color:${f.includes('OK')||f.includes('RESET')?'#56d364':f.includes('DENIED')||f.includes('WARN')?'#e3b341':'#f85149'}">${f}</span>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// FAULT / RESTORE
+// ══════════════════════════════════════════════════════
+function triggerFault(reason){
+  jointDown = true;
+  authState = 'AWAIT_RFID';
+  setStatus('RED', load);
+  addLog(reason+' FAULT', '#f85149');
+  setMsg('⚠ FAULT: '+reason+'\nScan RFID badge to begin MFA recovery.', '#f85149');
+  ['ra-stat','rb-stat','rc-stat'].forEach(id=>{
+    document.getElementById(id).textContent='IDLE';
+    document.getElementById(id).style.color='#484f58';
+  });
+}
+
+function restoreJoint(){
+  jointDown  = false;
+  authState  = 'IDLE';
+  pokaActive = false;
+  pokaStep   = 0;
+  document.getElementById('poka-panel').classList.remove('show');
+  load = 50;
+  document.getElementById('vslider').value = 50;
+  setStatus('GREEN', 50);
+  addLog('RESET OK — Card '+currentCard, '#56d364');
+  setMsg('✅ Joint restored. System nominal.', '#56d364');
+  prevented++;
+  document.getElementById('r-prevented').textContent = prevented;
+  const sav = prevented*38000;
+  document.getElementById('r-savings').textContent = sav>=1000000?'$'+(sav/1000000).toFixed(1)+'M':'$'+sav.toLocaleString();
+}
+
+// ══════════════════════════════════════════════════════
+// MFA / RFID
+// ══════════════════════════════════════════════════════
+function scanCard(c){
+  const labels = {A:'Floor Worker',B:'Maint. Tech',C:'Engineer'};
+  const colors = {A:'#56d364',B:'#58a6ff',C:'#bc8cff'};
+  const statIds= {A:'ra-stat',B:'rb-stat',C:'rc-stat'};
+  const ts = new Date().toLocaleTimeString();
+
+  if(authState==='IDLE'){
+    setMsg('Card '+c+' ('+labels[c]+') scanned — system nominal.', colors[c]);
+    return;
+  }
+  if(authState!=='AWAIT_RFID') return;
+
+  currentCard = c;
+  document.getElementById(statIds[c]).textContent = 'SCANNED';
+  document.getElementById(statIds[c]).style.color = colors[c];
+
+  if(c==='A'){
+    document.getElementById('ra-stat').textContent='DENIED';
+    document.getElementById('ra-stat').style.color='#f85149';
+    addLog('Card A DENIED — no clearance', '#e3b341');
+    setMsg('🚫 ACCESS DENIED\nCard A (Floor Worker) has no reset clearance.\nCall maintenance tech.', '#f85149');
+  } else {
+    authState = 'AWAIT_PIN';
+    document.getElementById(statIds[c]).textContent='AWAITING PIN';
+    addLog('Card '+c+' scanned — Factor 1 OK', '#58a6ff');
+    setMsg('✓ Badge verified (Factor 1 ✓)\nEnter PIN on keyboard:\n  Card B = 1234 | Card C = 9999', '#58a6ff');
+  }
+}
+
+function submitPin(p){
+  if(authState!=='AWAIT_PIN') return;
+  const correct = currentCard==='B'?'1234':'9999';
+  if(p===correct){
+    authState = 'POKA';
+    addLog('PIN OK — Factor 2 verified', '#56d364');
+    setMsg('✅ Both factors verified.\nComplete safety checklist to restore joint.','#56d364');
+    setTimeout(startPoka, 400);
+  } else {
+    pin = '';
+    addLog('Wrong PIN attempt','#e3b341');
+    setMsg('❌ Wrong PIN. Try again.\n  Card B = 1234 | Card C = 9999','#f85149');
+  }
+}
+
+// Keyboard PIN input
+document.addEventListener('keydown', e=>{
+  if(authState!=='AWAIT_PIN') return;
+  if(e.key>='0'&&e.key<='9'&&pin.length<4) pin+=e.key;
+  if(e.key==='Backspace') pin=pin.slice(0,-1);
+  if(e.key==='Enter'){ submitPin(pin); return; }
+  setMsg('Factor 1 ✓ | PIN: '+'●'.repeat(pin.length).padEnd(4,'_')+' (Enter to submit)','#58a6ff');
+});
+
+// ══════════════════════════════════════════════════════
+// POKA-YOKE
+// ══════════════════════════════════════════════════════
+const POKA_STEPS = ['Workspace Clear','Inspect Joint','Check TCP/Payload','Review Fault Log','Clear Hazard'];
+
+function startPoka(){
+  pokaStep   = 0;
+  pokaActive = true;
+  document.getElementById('poka-panel').classList.add('show');
+  ['ps0','ps1','ps2','ps3','ps4'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.className='pstep'+(i===0?' active':'');
+    el.querySelector('.step-num').style.background=i===0?'#e3b341':'#21262d';
+  });
+  setMsg('STEP 1: Confirm workspace is clear.\nPress 1 on keyboard.','#e3b341');
+}
+
+function confirmPoka(key){
+  if(!pokaActive) return;
+  const expected = (pokaStep+1).toString();
+  if(key!==expected){
+    document.getElementById('ps'+pokaStep).className='pstep error';
+    setMsg('❌ Wrong step! Press '+(pokaStep+1)+' to confirm step '+(pokaStep+1),'#f85149');
+    return;
+  }
+  const el=document.getElementById('ps'+pokaStep);
+  el.className='pstep done';
+  el.querySelector('.step-num').style.background='#56d364';
+  pokaStep++;
+  if(pokaStep>=5){
+    pokaActive=false;
+    setMsg('✅ All 5 steps confirmed.\nRestoring joint...','#56d364');
+    setTimeout(()=>restoreJoint(),1200);
+  } else {
+    const next=document.getElementById('ps'+pokaStep);
+    next.className='pstep active';
+    next.querySelector('.step-num').style.background='#e3b341';
+    setMsg('STEP '+(pokaStep+1)+': '+POKA_STEPS[pokaStep]+'.\nPress '+(pokaStep+1)+' on keyboard.','#e3b341');
+  }
+}
+
+// Keyboard poka input
+document.addEventListener('keydown', e=>{
+  if(!pokaActive) return;
+  if(e.key>='1'&&e.key<='5') confirmPoka(e.key);
+});
+
+// ══════════════════════════════════════════════════════
+// SIMULATIONS
+// ══════════════════════════════════════════════════════
+function clearSim(){
+  if(simTimer){clearInterval(simTimer);simTimer=null;}
+  demoRunning=false;
+  load=50;
+  document.getElementById('vslider').value=50;
+}
+
+function simRun(name, target, msg){
+  clearSim();
+  if(jointDown) return;
+  load = target;
+  document.getElementById('vslider').value=target;
+  setMsg(msg,'#bc8cff');
+}
+
+function simGearWear(){
+  clearSim();
+  if(jointDown) return;
+  setMsg('SCENARIO: Gear wear — load creeps up slowly','#bc8cff');
+  load=50;
+  simTimer=setInterval(()=>{
+    if(jointDown){clearSim();return;}
+    load = Math.min(100, load+1.5+(Math.random()*0.8));
+    document.getElementById('vslider').value=Math.round(load);
+    if(load>=80) clearSim();
+  },400);
+}
+
+function simVibration(){
+  clearSim();
+  if(jointDown) return;
+  setMsg('SCENARIO: Loose bolt — erratic load spikes','#bc8cff');
+  load=52;
+  let cycle=0;
+  simTimer=setInterval(()=>{
+    if(jointDown){clearSim();return;}
+    cycle++;
+    const spike = cycle%8===0 ? 52+30+(Math.random()*20) : 52+(Math.random()-.5)*10;
+    load = Math.max(0,Math.min(100,spike));
+    document.getElementById('vslider').value=Math.round(load);
+  },250);
+}
+
+function simThermal(){
+  clearSim();
+  if(jointDown) return;
+  setMsg('SCENARIO: Thermal overload — motor temperature rising','#bc8cff');
+  load=50;
+  let phase=0;
+  simTimer=setInterval(()=>{
+    if(jointDown){clearSim();return;}
+    phase++;
+    if(phase<10)      load+=2;
+    else if(phase<20) load+=0.4;
+    else              load+=3;
+    load=Math.min(100,load);
+    document.getElementById('vslider').value=Math.round(load);
+  },500);
+}
+
+function simCableSnag(){
+  clearSim();
+  if(jointDown) return;
+  setMsg('SCENARIO: Cable snag — irregular resistance','#bc8cff');
+  const seq=[50,52,68,55,71,59,74,57,82];
+  let i=0;
+  simTimer=setInterval(()=>{
+    if(jointDown||i>=seq.length){clearSim();return;}
+    load=seq[i++];
+    document.getElementById('vslider').value=load;
+  },800);
+}
+
+function simIntrusion(){
+  if(!jointDown){setMsg('Trigger a fault first, then try INTRUSION','#484f58');return;}
+  setMsg('🚨 INTRUSION: Unauthorized reset attempt!','#f85149');
+  addLog('INTRUSION: unauthorized attempt','#f85149');
+  setTimeout(()=>scanCard('A'),500);
+  setTimeout(()=>scanCard('A'),2000);
+  setTimeout(()=>scanCard('A'),3500);
+  setTimeout(()=>{
+    addLog('LOCKOUT: 3 failed attempts — supervisor alerted','#f85149');
+    setMsg('🔒 3 failed attempts — Supervisor notified. Joint locked.','#f85149');
+  },4500);
+}
+
+// ══════════════════════════════════════════════════════
+// AUTO DEMO — full 22s hands-free cycle
+// ══════════════════════════════════════════════════════
+function autoDemo(){
+  if(demoRunning) return;
+  doReset();
+  demoRunning = true;
+  const steps = [
+    [0,    ()=>setMsg('▶ AUTO DEMO: Load climbing...','#58a6ff')],
+    [800,  ()=>{ load=55; document.getElementById('vslider').value=55; }],
+    [2000, ()=>{ load=66; document.getElementById('vslider').value=66; }],
+    [3500, ()=>{ load=74; document.getElementById('vslider').value=74; }],
+    [5500, ()=>{ load=87; document.getElementById('vslider').value=87; }],
+    [7000, ()=>setMsg('Card A scanned — floor worker...','#e3b341')],
+    [7500, ()=>scanCard('A')],
+    [9500, ()=>setMsg('Card B scanned — maintenance tech...','#58a6ff')],
+    [10000,()=>scanCard('B')],
+    [12000,()=>submitPin('1234')],
+    [13200,()=>confirmPoka('1')],
+    [14200,()=>confirmPoka('2')],
+    [15200,()=>confirmPoka('3')],
+    [16200,()=>confirmPoka('4')],
+    [17200,()=>confirmPoka('5')],
+    [20000,()=>{ demoRunning=false; setMsg('✅ DEMO COMPLETE','#56d364'); }],
+  ];
+  steps.forEach(([t,fn])=>setTimeout(fn,t));
+}
+
+// ══════════════════════════════════════════════════════
+// MAINTENANCE
+// ══════════════════════════════════════════════════════
+function toggleMaint(){
+  const p=document.getElementById('maint-panel');
+  p.classList.toggle('show');
+}
+
+function logMaint(){
+  const part  = document.getElementById('m-part').value;
+  const type  = document.getElementById('m-type').value;
+  const date  = document.getElementById('m-date').value;
+  const tech  = document.getElementById('m-tech').value||'Unknown';
+  if(!date){alert('Select a date');return;}
+  maintLog.unshift({part,type,date,tech});
+  if(!lastService[part]||date>lastService[part]) lastService[part]=date;
+  renderMaintLog();
+  updateParts();
+}
+
+function renderMaintLog(){
+  const el=document.getElementById('mlog');
+  el.innerHTML = maintLog.slice(0,6).map(e=>
+    `<div class="mlog-item"><span style="color:#58a6ff">${e.date}</span> — <strong style="color:#e6edf3">${PARTS[e.part].name}</strong> <span style="color:#56d364">[${e.type}]</span> <span>by ${e.tech}</span></div>`
+  ).join('') || '<div style="color:#30363d;font-size:9px">No events</div>';
+}
+
+function daysSince(d){ return d?Math.floor((Date.now()-new Date(d))/86400000):null; }
+
+function updateParts(){
+  let minH=100,critP=null,minDays=Infinity,nextP=null;
+  Object.keys(PARTS).forEach(p=>{
+    const spec=PARTS[p];
+    const days=daysSince(lastService[p]);
+    const h = days===null?100:Math.max(0,100-(days/spec.life)*100);
+    const left = days===null?spec.life:Math.max(0,spec.life-days);
+    const row=document.getElementById('pr-'+p);
+    if(!row) return;
+    row.querySelector('.pr-d').textContent=lastService[p]||'Never';
+    row.querySelector('.pr-l').textContent=left>0?left+'d':0+'d (OVERDUE)';
+    row.querySelector('.pr-l').style.color=left<30?'#f85149':left<60?'#e3b341':'#56d364';
+    row.querySelector('.hbar').style.width=h.toFixed(0)+'%';
+    row.querySelector('.hbar').style.background=h>=70?'#56d364':h>=35?'#e3b341':'#f85149';
+    const ps=row.querySelector('.ps');
+    if(h>=70){ps.className='ps ps-good';ps.textContent='GOOD';}
+    else if(h>=35){ps.className='ps ps-warn';ps.textContent='SERVICE SOON';}
+    else{ps.className='ps ps-crit';ps.textContent='CRITICAL';}
+    if(h<minH){minH=h;critP=p;}
+    if(left<minDays){minDays=left;nextP=p;}
+  });
+  const replacements=maintLog.filter(e=>e.type==='replacement');
+  let mtbfStr='Need ≥2 replacements';
+  if(replacements.length>=2){
+    const sorted=replacements.map(e=>new Date(e.date).getTime()).sort((a,b)=>b-a);
+    const ints=[];for(let i=1;i<sorted.length;i++) ints.push((sorted[i-1]-sorted[i])/86400000);
+    mtbfStr=Math.round(ints.reduce((a,b)=>a+b,0)/ints.length)+' days';
+  }
+  document.getElementById('mt-avg').textContent=mtbfStr;
+  document.getElementById('mt-crit').textContent=critP?PARTS[critP].name+' ('+minH.toFixed(0)+'%)':'—';
+  document.getElementById('mt-next').textContent=nextP?PARTS[nextP].name+' in '+minDays+'d':'—';
+  document.getElementById('mt-cost').textContent=maintLog.length>0?'Planned service vs $38K fault':'Log events to compare';
+}
+
+// Demo maintenance data
+function loadDemoMaint(){
+  const data=[
+    {part:'motor',  type:'inspection',  date:'2025-12-01',tech:'Chen'},
+    {part:'gear',   type:'lubrication', date:'2025-11-15',tech:'Rodriguez'},
+    {part:'bearing',type:'replacement', date:'2025-09-20',tech:'Chen'},
+    {part:'bearing',type:'replacement', date:'2025-03-10',tech:'Singh'},
+    {part:'joint',  type:'replacement', date:'2025-10-05',tech:'Rodriguez'},
+    {part:'cable',  type:'inspection',  date:'2025-12-15',tech:'Singh'},
+  ];
+  data.forEach(e=>{
+    maintLog.push(e);
+    if(!lastService[e.part]||e.date>lastService[e.part]) lastService[e.part]=e.date;
+  });
+  renderMaintLog();
+  updateParts();
+}
+
+// Set today as default date in maintenance picker
+window.addEventListener('load',()=>{
+  const d=document.getElementById('m-date');
+  if(d) d.value=new Date().toISOString().split('T')[0];
+  setTimeout(loadDemoMaint,300);
+});
+
+// ══════════════════════════════════════════════════════
+// GAUGE DRAW
+// ══════════════════════════════════════════════════════
+function drawGauge(v){
+  const c=document.getElementById('gcanvas');
+  const ctx=c.getContext('2d');
+  const cx=75,cy=75,r=60;
+  ctx.clearRect(0,0,150,150);
+  const startA=Math.PI*0.75, endA=Math.PI*2.25;
+
+  // Track
+  ctx.beginPath();ctx.arc(cx,cy,r,startA,endA);
+  ctx.strokeStyle='#21262d';ctx.lineWidth=12;ctx.lineCap='round';ctx.stroke();
+
+  // Fill
+  const pct=v/100;
+  const col=v>=80?'#f85149':v>=65?'#e3b341':'#56d364';
+  ctx.beginPath();ctx.arc(cx,cy,r,startA,startA+(endA-startA)*pct);
+  ctx.strokeStyle=col;ctx.lineWidth=12;ctx.lineCap='round';ctx.stroke();
+
+  // Zone markers
+  [[65,'#e3b341'],[80,'#f85149']].forEach(([pct2,col2])=>{
+    const a=startA+(endA-startA)*(pct2/100);
+    ctx.beginPath();ctx.arc(cx,cy,r,a-0.02,a+0.02);
+    ctx.strokeStyle=col2;ctx.lineWidth=14;ctx.stroke();
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// WAVEFORM DRAW
+// ══════════════════════════════════════════════════════
+function drawWave(){
+  const c=document.getElementById('wcanvas');
+  const W=c.offsetWidth,H=c.offsetHeight;
+  c.width=W;c.height=H;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // Zone bands
+  [[0,20,'#f8514911'],[20,30,'#e3b34111'],[65,80,'#e3b34111'],[80,100,'#f8514911']].forEach(([lo,hi,col])=>{
+    ctx.fillStyle=col;
+    ctx.fillRect(0,H-(hi/100*H),W,(hi-lo)/100*H);
+  });
+
+  // Zone lines
+  [['#e3b341',65],['#f85149',80],['#e3b341',30],['#f85149',20]].forEach(([col,pct])=>{
+    const y=H-(pct/100*H);
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);
+    ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=col;ctx.font='8px monospace';ctx.fillText(pct+'%',4,y-2);
+  });
+
+  // Baseline
+  if(blLocked){
+    const by=H-(blAvg/100*H);
+    ctx.beginPath();ctx.moveTo(0,by);ctx.lineTo(W,by);
+    ctx.strokeStyle='#58a6ff44';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#58a6ff';ctx.font='8px monospace';ctx.fillText('BASE',4,by-2);
+  }
+
+  // Waveform
+  if(waveData.length<2) return;
+  ctx.beginPath();
+  waveData.forEach((v,i)=>{
+    const x=(i/(HIST-1))*W;
+    const y=H-(v/100*H);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle='#58a6ff';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();
+
+  // Colour fill under line
+  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();
+  ctx.fillStyle='#58a6ff09';ctx.fill();
+}
+
+// ══════════════════════════════════════════════════════
+// EARLY WARNING
+// ══════════════════════════════════════════════════════
+let ewTimer=0;
+function updateEW(v){
+  if(Date.now()-ewTimer<600) return;
+  ewTimer=Date.now();
+  if(!blLocked) return;
+
+  const drift=((v-blAvg)/blAvg)*100;
+  driftH.push(drift);
+  if(driftH.length>60) driftH.shift();
+
+  const rateRaw = driftH.length>10
+    ? (driftH.slice(-5).reduce((a,b)=>a+b)/5 - driftH.slice(0,5).reduce((a,b)=>a+b)/5)/driftH.length*60
+    : 0;
+  smoothRate = smoothRate*0.9+rateRaw*0.1;
+
+  const hrsLeft = smoothRate>0.01 ? (80-v)/(smoothRate/60)/60 : null;
+  const hStr = hrsLeft===null?'—':hrsLeft>24?'>24h':hrsLeft>1?hrsLeft.toFixed(1)+'h':(hrsLeft*60).toFixed(0)+'min';
+
+  const setEW=(id,val,active,col)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.textContent=active?val:'—';
+    el.style.color=active?col:'#484f58';
+  };
+  setEW('ew-watch', '+'+drift.toFixed(1)+'%',     drift>=5,  '#58a6ff');
+  setEW('ew-adv',   '+'+drift.toFixed(1)+'%',     drift>=10, '#bc8cff');
+  setEW('ew-warn',  hStr+' to fault',              drift>=15, '#e3b341');
+  setEW('ew-crit',  hStr+' to fault',              drift>=20, '#f85149');
+
+  document.getElementById('ss-drift').textContent=(drift>0?'+':'')+drift.toFixed(1)+'%';
+  document.getElementById('ss-drift').style.color=drift>=15?'#f85149':drift>=5?'#e3b341':'#56d364';
+  document.getElementById('ss-rate').textContent=smoothRate>0.01?'+'+smoothRate.toFixed(2)+'%/min':'stable';
+  document.getElementById('ss-rate').style.color=smoothRate>0.5?'#e3b341':'#56d364';
+
+  // Prediction card
+  const card=document.getElementById('predict-card');
+  if(smoothRate>0.3&&!jointDown){
+    card.classList.add('show');
+    document.getElementById('predict-msg').textContent='Load trending up +'+smoothRate.toFixed(2)+'%/min';
+    document.getElementById('predict-time').textContent='Est. '+hStr+' to fault';
+    document.getElementById('h-predict').textContent=hStr;
+    document.getElementById('h-predict').style.color=hrsLeft&&hrsLeft<2?'#f85149':'#e3b341';
+  } else {
+    card.classList.remove('show');
+    document.getElementById('h-predict').textContent='—';
+    document.getElementById('h-predict').style.color='#484f58';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// MAIN LOOP
+// ══════════════════════════════════════════════════════
+function loop(){
+  const noisy = load+(Math.random()-.5)*1.5;
+  const v = Math.max(0,Math.min(100,noisy));
+
+  // Waveform
+  waveData.shift();
+  waveData.push(v);
+
+  // Baseline
+  if(!blLocked){
+    blBuf.push(v);
+    const pct=Math.round(blBuf.length/BL_N*100);
+    document.getElementById('ss-baseline').textContent='Learning '+pct+'%';
+    if(blBuf.length>=BL_N){
+      blAvg=blBuf.reduce((a,b)=>a+b)/blBuf.length;
+      blLocked=true;
+      document.getElementById('ss-baseline').textContent=blAvg.toFixed(1)+'% (locked)';
+      document.getElementById('ss-baseline').style.color='#56d364';
+    }
+  }
+
+  // Trend
+  trend = v-prevLoad;
+  prevLoad=v;
+  const tStr=trend>3?'▲ RISING':trend<-3?'▼ FALLING':'→ STABLE';
+  const tCol=trend>3?'#e3b341':trend<-3?'#58a6ff':'#56d364';
+  document.getElementById('h-trend').textContent=tStr;
+  document.getElementById('h-trend').style.color=tCol;
+
+  // Temp
+  const temp=22+(v*0.3);
+  document.getElementById('h-temp').textContent=temp.toFixed(0)+'°C';
+  document.getElementById('h-temp').style.color=temp>40?'#f85149':temp>35?'#e3b341':'#56d364';
+
+  // Vib sim counter
+  document.getElementById('ss-vib').textContent=simTimer&&simTimer._vib?'ACTIVE':'inactive';
+
+  // Zone
+  const newZone=getZone(v);
+  if(!jointDown){
+    if(newZone==='RED') triggerFault(v>=80?'OVERLOAD':'STALL');
+    else setStatus(newZone,v);
+  }
+
+  // Draw
+  drawGauge(v);
+  drawWave();
+  updateEW(v);
+
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+</script>
 </body>
 </html>
