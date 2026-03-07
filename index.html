@@ -108,6 +108,26 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
 .error-counter{display:flex;flex-direction:column;align-items:center;padding:10px 14px;background:#080c11;border-radius:6px;border:1px solid #21262d}
 .error-counter .enum{font-size:26px;font-weight:700;color:#56d364;line-height:1}
 .error-counter .elbl{font-size:9px;color:#484f58;letter-spacing:1px;margin-top:3px}
+
+/* EARLY WARNING SYSTEM */
+#ew-panel{background:#0d1117;border-top:1px solid #21262d;padding:10px 16px;flex-shrink:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ew-stage{flex:1;min-width:100px;padding:8px 10px;border-radius:6px;border:1px solid #21262d;background:#080c11;text-align:center;transition:all .4s}
+.ew-stage .es-label{font-size:8px;letter-spacing:1px;color:#484f58;margin-bottom:4px}
+.ew-stage .es-val{font-size:13px;font-weight:700;color:#484f58}
+.ew-stage .es-time{font-size:9px;color:#484f58;margin-top:2px}
+.ew-stage.active-watch   {border-color:#58a6ff;background:#58a6ff09}.ew-stage.active-watch    .es-val{color:#58a6ff}
+.ew-stage.active-advisory{border-color:#bc8cff;background:#bc8cff09}.ew-stage.active-advisory .es-val{color:#bc8cff}
+.ew-stage.active-warning {border-color:#e3b341;background:#e3b34109}.ew-stage.active-warning  .es-val{color:#e3b341}
+.ew-stage.active-critical{border-color:#f85149;background:#f8514909;animation:flash .8s infinite}.ew-stage.active-critical .es-val{color:#f85149}
+.ew-stage.passed{border-color:#21262d;background:#56d36409}.ew-stage.passed .es-val{color:#56d364}
+
+.baseline-box{background:#080c11;border:1px solid #21262d;border-radius:6px;padding:8px 12px;min-width:160px}
+.baseline-box h4{font-size:9px;color:#484f58;letter-spacing:1px;margin-bottom:5px}
+.bb-row{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
+.bb-lbl{color:#484f58}
+.bb-val{font-weight:700}
+
+#ew-summary{font-size:11px;padding:8px 12px;border-radius:6px;min-width:220px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -120,6 +140,44 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
   <span class="hbadge green-b" id="hbadge">● NOMINAL</span>
 </div>
 
+
+<!-- EARLY WARNING SYSTEM -->
+<div id="ew-panel">
+  <div style="font-size:9px;color:#484f58;letter-spacing:2px;flex-shrink:0">PREDICTIVE HORIZON</div>
+
+  <div class="ew-stage" id="ew-watch">
+    <div class="es-label">👁 WATCH</div>
+    <div class="es-val" id="ew-watch-val">—</div>
+    <div class="es-time" id="ew-watch-time">4+ hrs</div>
+  </div>
+  <div class="ew-stage" id="ew-advisory">
+    <div class="es-label">📋 ADVISORY</div>
+    <div class="es-val" id="ew-adv-val">—</div>
+    <div class="es-time" id="ew-adv-time">2–4 hrs</div>
+  </div>
+  <div class="ew-stage" id="ew-warning">
+    <div class="es-label">⚠ WARNING</div>
+    <div class="es-val" id="ew-warn-val">—</div>
+    <div class="es-time" id="ew-warn-time">1–2 hrs</div>
+  </div>
+  <div class="ew-stage" id="ew-critical">
+    <div class="es-label">🔴 CRITICAL</div>
+    <div class="es-val" id="ew-crit-val">—</div>
+    <div class="es-time" id="ew-crit-time">&lt;1 hr</div>
+  </div>
+
+  <div class="baseline-box">
+    <h4>BASELINE ANALYSIS</h4>
+    <div class="bb-row"><span class="bb-lbl">Baseline avg</span><span class="bb-val" id="bl-avg">—</span></div>
+    <div class="bb-row"><span class="bb-lbl">Current avg</span><span class="bb-val" id="bl-cur">—</span></div>
+    <div class="bb-row"><span class="bb-lbl">Drift</span><span class="bb-val" id="bl-drift">—</span></div>
+    <div class="bb-row"><span class="bb-lbl">Drift rate</span><span class="bb-val" id="bl-rate">—</span></div>
+  </div>
+
+  <div id="ew-summary" style="background:#080c11;border:1px solid #21262d;border-radius:6px;color:#484f58">
+    Establishing baseline... run system for 10 seconds.
+  </div>
+</div>
 <div id="body">
 
   <!-- COL 1: GAUGE -->
@@ -716,6 +774,165 @@ function simUnauthorized(){
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// PREDICTIVE MAINTENANCE ENGINE — HOURS-AHEAD FAULT DETECTION
+// Based on: baseline drift + degradation rate + MTBF projection
+// ══════════════════════════════════════════════════════════════
+
+const BASELINE_SAMPLES  = 100;   // samples to establish baseline
+const LONG_HISTORY      = 500;   // longer rolling window
+const FAULT_THRESHOLD   = 80;    // % load = red zone
+
+// Stage thresholds (% drift from baseline)
+const WATCH_DRIFT    = 5;   // +5% above baseline
+const ADVISORY_DRIFT = 10;  // +10%
+const WARNING_DRIFT  = 15;  // +15%
+const CRITICAL_DRIFT = 20;  // +20% — fault imminent
+
+let baselineBuffer   = [];
+let baselineAvg      = null;
+let baselineStdDev   = null;
+let baselineLocked   = false;
+let longHistory      = new Array(LONG_HISTORY).fill(50);
+let driftHistory     = [];       // track drift over time
+let degradationRate  = 0;        // % drift per minute
+let currentStage     = 'NORMAL'; // NORMAL WATCH ADVISORY WARNING CRITICAL
+let stageEntryTime   = {};       // when each stage was entered
+let hoursToFault     = null;
+
+function updateBaseline(v) {
+  if(baselineLocked) return;
+  baselineBuffer.push(v);
+  if(baselineBuffer.length >= BASELINE_SAMPLES) {
+    const sum = baselineBuffer.reduce((a,b)=>a+b,0);
+    baselineAvg = sum / baselineBuffer.length;
+    const variance = baselineBuffer.reduce((a,b)=>a+(b-baselineAvg)**2,0)/baselineBuffer.length;
+    baselineStdDev = Math.sqrt(variance);
+    baselineLocked = true;
+    console.log('Baseline locked:', baselineAvg.toFixed(1), '±', baselineStdDev.toFixed(1));
+  }
+}
+
+function calcDegradationRate() {
+  if(driftHistory.length < 10) return 0;
+  // Linear regression on drift over time
+  const n = driftHistory.length;
+  const recent = driftHistory.slice(-20); // last 20 drift readings
+  const older  = driftHistory.slice(0, 20);
+  const recentAvg = recent.reduce((a,b)=>a+b,0)/recent.length;
+  const olderAvg  = older.reduce((a,b)=>a+b,0)/older.length;
+  // Each sample ≈ 100ms → 20 samples ≈ 2 seconds
+  // Rate per minute = (recentAvg - olderAvg) / 2s * 60s
+  const rate = (recentAvg - olderAvg) / 2 * 60;
+  return Math.max(0, rate);
+}
+
+function estimateHoursToFault(currentPct, ratePerMin) {
+  if(ratePerMin <= 0.01) return null; // stable
+  const distToFault = FAULT_THRESHOLD - currentPct;
+  if(distToFault <= 0) return 0;
+  const minsLeft = distToFault / ratePerMin;
+  return minsLeft / 60; // convert to hours
+}
+
+function getEarlyWarningStage(drift, hrs) {
+  if(drift >= CRITICAL_DRIFT || (hrs !== null && hrs < 1)) return 'CRITICAL';
+  if(drift >= WARNING_DRIFT  || (hrs !== null && hrs < 2)) return 'WARNING';
+  if(drift >= ADVISORY_DRIFT || (hrs !== null && hrs < 4)) return 'ADVISORY';
+  if(drift >= WATCH_DRIFT    || (hrs !== null && hrs < 8)) return 'WATCH';
+  return 'NORMAL';
+}
+
+function updateEarlyWarningPanel(v) {
+  if(!baselineLocked) {
+    const pct = Math.round((baselineBuffer.length / BASELINE_SAMPLES) * 100);
+    document.getElementById('ew-summary').textContent =
+      `Establishing baseline... ${pct}% (need ${BASELINE_SAMPLES - baselineBuffer.length} more samples)`;
+    document.getElementById('ew-summary').style.color = '#484f58';
+    return;
+  }
+
+  const drift = v - baselineAvg;
+  const driftPct = (drift / baselineAvg) * 100;
+
+  // Track drift history
+  driftHistory.push(driftPct);
+  if(driftHistory.length > 200) driftHistory.shift();
+
+  // Calc degradation
+  degradationRate = calcDegradationRate();
+  hoursToFault = estimateHoursToFault(v, degradationRate);
+  const stage = getEarlyWarningStage(driftPct, hoursToFault);
+
+  // Update baseline box
+  document.getElementById('bl-avg').textContent  = baselineAvg.toFixed(1)+'%';
+  document.getElementById('bl-avg').style.color  = '#56d364';
+  document.getElementById('bl-cur').textContent  = v.toFixed(1)+'%';
+  document.getElementById('bl-cur').style.color  = driftPct>WATCH_DRIFT?'#e3b341':'#56d364';
+
+  const driftColor = driftPct>=CRITICAL_DRIFT?'#f85149':driftPct>=WARNING_DRIFT?'#e3b341':driftPct>=WATCH_DRIFT?'#bc8cff':'#56d364';
+  document.getElementById('bl-drift').textContent = (driftPct>0?'+':'')+driftPct.toFixed(1)+'%';
+  document.getElementById('bl-drift').style.color = driftColor;
+  document.getElementById('bl-rate').textContent  = degradationRate>0?'+'+degradationRate.toFixed(2)+'%/min':'stable';
+  document.getElementById('bl-rate').style.color  = degradationRate>0.5?'#e3b341':'#56d364';
+
+  // Update stage cards
+  const stages = ['watch','advisory','warning','critical'];
+  const stageMap = { WATCH:0, ADVISORY:1, WARNING:2, CRITICAL:3 };
+  const activeIdx = stageMap[stage] ?? -1;
+
+  stages.forEach((s,i) => {
+    const el = document.getElementById('ew-'+s);
+    el.className = 'ew-stage';
+    if(i < activeIdx) el.className += ' passed';
+    else if(i === activeIdx) el.className += ' active-'+s;
+  });
+
+  // Update stage time values
+  const hrsStr = hoursToFault===null?'—':hoursToFault>24?'>24hrs':hoursToFault>1?hoursToFault.toFixed(1)+'hrs':(hoursToFault*60).toFixed(0)+'min';
+
+  document.getElementById('ew-watch-val').textContent  = driftPct>=WATCH_DRIFT    ? '+'+driftPct.toFixed(1)+'%' : '—';
+  document.getElementById('ew-adv-val').textContent    = driftPct>=ADVISORY_DRIFT ? '+'+driftPct.toFixed(1)+'%' : '—';
+  document.getElementById('ew-warn-val').textContent   = driftPct>=WARNING_DRIFT  ? '+'+driftPct.toFixed(1)+'%' : '—';
+  document.getElementById('ew-crit-val').textContent   = driftPct>=CRITICAL_DRIFT ? '+'+driftPct.toFixed(1)+'%' : '—';
+
+  if(hoursToFault !== null) {
+    document.getElementById('ew-crit-time').textContent = hrsStr+' to fault';
+    document.getElementById('ew-warn-time').textContent = hoursToFault>1?(hoursToFault+1).toFixed(1)+'hrs':'imminent';
+    document.getElementById('ew-adv-time').textContent  = hoursToFault>2?(hoursToFault+2).toFixed(1)+'hrs':'<2hrs';
+    document.getElementById('ew-watch-time').textContent= hoursToFault>4?(hoursToFault+3).toFixed(1)+'hrs':'<4hrs';
+  }
+
+  // Summary message
+  const sumEl = document.getElementById('ew-summary');
+  const msgs = {
+    NORMAL:   ['#56d364', `✅ Joint healthy — load within ±${WATCH_DRIFT}% of baseline.
+No action required.`],
+    WATCH:    ['#58a6ff', `👁 WATCH: Load drifted +${driftPct.toFixed(1)}% above baseline.
+Monitor closely. No action yet.`],
+    ADVISORY: ['#bc8cff', `📋 ADVISORY: Degradation detected.
+Schedule maintenance for next planned downtime.
+Est. ${hrsStr} before fault.`],
+    WARNING:  ['#e3b341', `⚠ WARNING: Significant drift +${driftPct.toFixed(1)}%.
+Alert maintenance team NOW.
+Est. ${hrsStr} remaining.`],
+    CRITICAL: ['#f85149', `🔴 CRITICAL: Fault imminent in ${hrsStr}.
+Reduce speed + dispatch tech immediately.
+Do NOT wait for shift end.`],
+  };
+  const [col, msg] = msgs[stage] || msgs.NORMAL;
+  sumEl.style.color = col;
+  sumEl.style.borderColor = col+'44';
+  sumEl.style.background = col+'09';
+  sumEl.textContent = msg;
+
+  currentStage = stage;
+}
+
+// Hook into main animation loop
+const _origLoop = loop;
+
 // ── ANIMATION LOOP ────────────────────────────────────────────
 function loop(){
   // Scroll history
@@ -730,6 +947,9 @@ function loop(){
 
   updateGauge(noisy);
   drawWave();
+  updateBaseline(noisy);
+  longHistory.shift(); longHistory.push(noisy);
+  updateEarlyWarningPanel(noisy);
 
   if(!jointDown) applyZone(noisy);
 
