@@ -715,23 +715,52 @@ function hardReset(){
 
 let demoRunning=false;
 function autoDemo(){
-  if(demoRunning) return; demoRunning=true; hardReset();
-  const steps=[
-    [0,    ()=>setLoad(50)],
-    [2000, ()=>{ document.getElementById('vslider').value=58; setLoad(58); }],
-    [4000, ()=>{ document.getElementById('vslider').value=67; setLoad(67); }], // amber
-    [7000, ()=>{ document.getElementById('vslider').value=74; setLoad(74); }], // deeper amber + predict
-    [10000,()=>{ document.getElementById('vslider').value=85; setLoad(85); }], // FAULT
-    [12000,()=>scanCard('A')],   // denied
-    [14000,()=>scanCard('B')],   // factor 1
-    [16000,()=>{ authState='AWAIT_PIN'; pin='1234'; document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter'})); }],
-      [19000,()=>{ demoRunning=false; document.getElementById('mfa-msg').textContent='DEMO COMPLETE'; }],
+  if(demoRunning) return;
+  hardReset();
+  setTimeout(()=>{
+    demoRunning=true;
+    const steps=[
+      [0,     ()=>{ document.getElementById('mfa-msg').textContent='▶ AUTO DEMO — Watch the full fault cycle'; document.getElementById('mfa-msg').style.color='#58a6ff'; }],
+      [1000,  ()=>{ document.getElementById('vslider').value=58; setLoad(58); }],
+      [3000,  ()=>{ document.getElementById('vslider').value=68; setLoad(68); }],
+      [5000,  ()=>{ document.getElementById('vslider').value=75; setLoad(75); }],
+      [8000,  ()=>{ document.getElementById('vslider').value=86; setLoad(86); }],
+      [10000, ()=>scanCard('A')],
+      [12500, ()=>scanCard('B')],
+      [14500, ()=>submitPin('1234')],
+      [16000, ()=>confirmPokaStep('1')],
+      [17000, ()=>confirmPokaStep('2')],
+      [18000, ()=>confirmPokaStep('3')],
+      [19000, ()=>confirmPokaStep('4')],
+      [20000, ()=>confirmPokaStep('5')],
+      [22000, ()=>{ demoRunning=false; document.getElementById('mfa-msg').textContent='✅ DEMO COMPLETE — Joint restored'; document.getElementById('mfa-msg').style.color='#56d364'; }],
     ];
     steps.forEach(([t,fn])=>setTimeout(fn,t));
-  },100);
+  },200);
 }
 
 
+
+
+// Direct PIN submit for demo (bypasses keyboard event listener)
+function submitPin(p){
+  if(authState!=='AWAIT_PIN') return;
+  pin = p;
+  const correct = currentCard==='B'?'1234':'9999';
+  const ts = new Date().toLocaleTimeString();
+  if(pin===correct){
+    authState='POKA';
+    document.getElementById('mfa-msg').textContent='✅ Factor 2 verified — Begin safety checklist';
+    document.getElementById('mfa-msg').style.color='#56d364';
+    faults.unshift(ts+' — Auth OK by Card '+currentCard);
+    renderLog();
+    setTimeout(()=>startPokaYoke(),500);
+  } else {
+    document.getElementById('mfa-msg').textContent='❌ Wrong PIN';
+    document.getElementById('mfa-msg').style.color='#f85149';
+    pin='';
+  }
+}
 
 // ── ROI TRACKER ───────────────────────────────────────────────
 let faultsPrevented = 0;
