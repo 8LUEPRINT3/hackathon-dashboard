@@ -128,6 +128,16 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
 .bb-val{font-weight:700}
 
 #ew-summary{font-size:11px;padding:8px 12px;border-radius:6px;min-width:220px;line-height:1.5}
+
+/* ROI TICKER */
+#roi-bar{background:#010409;border-bottom:1px solid #21262d;padding:7px 16px;display:flex;gap:16px;align-items:center;flex-shrink:0;overflow-x:auto}
+#roi-bar::-webkit-scrollbar{height:2px}
+.roi-stat{display:flex;flex-direction:column;align-items:center;padding:4px 14px;border-right:1px solid #21262d;flex-shrink:0}
+.roi-stat:last-child{border-right:none}
+.roi-num{font-size:16px;font-weight:700}
+.roi-lbl{font-size:8px;color:#484f58;letter-spacing:1px;margin-top:1px;white-space:nowrap}
+.roi-sub{font-size:8px;margin-top:1px;white-space:nowrap}
+#savings-ticker{font-size:12px;color:#56d364;margin-left:auto;flex-shrink:0;font-weight:700}
 </style>
 </head>
 <body>
@@ -142,6 +152,41 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
 
 
 <!-- EARLY WARNING SYSTEM -->
+
+<!-- ROI BAR -->
+<div id="roi-bar">
+  <div class="roi-stat">
+    <div class="roi-num" style="color:#f85149">$2.3M</div>
+    <div class="roi-lbl">COST PER HOUR</div>
+    <div class="roi-sub" style="color:#484f58">Automotive downtime (2024)</div>
+  </div>
+  <div class="roi-stat">
+    <div class="roi-num" style="color:#e3b341">$38K</div>
+    <div class="roi-lbl">AVG FAULT EVENT</div>
+    <div class="roi-sub" style="color:#484f58">UR10e repair + downtime</div>
+  </div>
+  <div class="roi-stat">
+    <div class="roi-num" style="color:#56d364">25–30%</div>
+    <div class="roi-lbl">MAINTENANCE SAVINGS</div>
+    <div class="roi-sub" style="color:#484f58">Predictive vs reactive</div>
+  </div>
+  <div class="roi-stat">
+    <div class="roi-num" style="color:#56d364">250%</div>
+    <div class="roi-lbl">AVG ROI</div>
+    <div class="roi-sub" style="color:#484f58">Payback in 12–18 months</div>
+  </div>
+  <div class="roi-stat">
+    <div class="roi-num" style="color:#58a6ff">$28.2B</div>
+    <div class="roi-lbl">MARKET SIZE 2030</div>
+    <div class="roi-sub" style="color:#484f58">Predictive maintenance sector</div>
+  </div>
+  <div class="roi-stat">
+    <div class="roi-num" style="color:#bc8cff" id="faults-prevented">0</div>
+    <div class="roi-lbl">FAULTS PREVENTED</div>
+    <div class="roi-sub" style="color:#484f58">This session</div>
+  </div>
+  <div id="savings-ticker">💰 SESSION SAVINGS: $0</div>
+</div>
 <div id="ew-panel">
   <div style="font-size:9px;color:#484f58;letter-spacing:2px;flex-shrink:0">PREDICTIVE HORIZON</div>
 
@@ -488,6 +533,8 @@ function getZone(v){
 function applyZone(v){
   const newZone=getZone(v);
   if(newZone==='RED' && !jointDown){ triggerFault(v>=80?'OVERLOAD':'STALL'); return; }
+  // Amber entry = fault prevented (caught before red)
+  if(newZone==='AMBER' && zone==='GREEN') { recordFaultPrevented(); }
   zone=newZone;
   updateStatusPanel(v,newZone);
   updatePrediction();
@@ -676,6 +723,34 @@ function autoDemo(){
   steps.forEach(([t,fn])=>setTimeout(fn,t));
 }
 
+
+
+// ── ROI TRACKER ───────────────────────────────────────────────
+let faultsPrevented = 0;
+let sessionSavings  = 0;
+const COST_PER_FAULT = 38000; // avg UR10e fault event cost
+
+function recordFaultPrevented() {
+  faultsPrevented++;
+  sessionSavings = faultsPrevented * COST_PER_FAULT;
+  document.getElementById('faults-prevented').textContent = faultsPrevented;
+  const formatted = sessionSavings >= 1000000
+    ? '$' + (sessionSavings/1000000).toFixed(2) + 'M'
+    : '$' + sessionSavings.toLocaleString();
+  document.getElementById('savings-ticker').textContent = '💰 SESSION SAVINGS: ' + formatted;
+  document.getElementById('savings-ticker').style.color = '#56d364';
+}
+
+// Call this when amber alert fires (fault was caught early = prevented)
+function checkAmberSavings(v) {
+  static_prev = checkAmberSavings.prev || 'GREEN';
+  const newZone = getZone(v);
+  if(static_prev === 'GREEN' && newZone === 'AMBER') {
+    // Caught it in amber = fault prevented
+    recordFaultPrevented();
+  }
+  checkAmberSavings.prev = newZone;
+}
 
 // ── SIMULATION SCENARIOS ──────────────────────────────────────
 
