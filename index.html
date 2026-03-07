@@ -229,10 +229,13 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
   <div class="twin-card" style="min-width:200px">
     <h4>HEALTH BREAKDOWN</h4>
     <div id="health-breakdown">
-      <div class="hb-row"><span class="hb-lbl">Load (40%)</span><div class="hb-bar"><div class="hb-fill" id="hb-load" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-load-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">Temp (30%)</span><div class="hb-bar"><div class="hb-fill" id="hb-temp" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-temp-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">Vibration (20%)</span><div class="hb-bar"><div class="hb-fill" id="hb-vib" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-vib-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">Drift (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-drift" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-drift-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">Load (25%)</span><div class="hb-bar"><div class="hb-fill" id="hb-load" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-load-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J1 Temp (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-temp" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-temp-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J2 Temp (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t2" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t2-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J3 Temp (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t3" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t3-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J1 Vib (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-vib" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-vib-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J2 Vib (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v2" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v2-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J3 Vib (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v3" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v3-v">100</span></div>
     </div>
   </div>
 
@@ -1218,30 +1221,45 @@ async function readSerial(){
 }
 
 // ── HEALTH SCORE CALCULATION ─────────────────────────
+// 3-joint piezo simulation state (0–1023 proxy, rises during vib sim)
+let piezoSim = [0, 0, 0];
+let piezoDecay = 0;
+
 function calcHealthScores(v){
-  // Load score: 100 at 50%, degrades toward 80% (fault)
+  // Load score: 100 at 50%, degrades toward 80%
   const ls = v<=80 ? Math.max(0, 100-(Math.max(0,v-50)/30)*100) : 0;
 
-  // Temp score: based on hero-temp value
+  // Temperature scores — each joint
   const tempRaw = parseFloat(document.getElementById('h-temp').textContent)||22;
-  const ts = tempRaw<=35?100:tempRaw<=40?Math.max(0,100-((tempRaw-35)/5)*100):0;
+  const tempScore1 = tempRaw<=35?100:tempRaw<=40?Math.max(0,100-((tempRaw-35)/5)*100):0;
+  const tempScore2 = Math.min(100, tempScore1 + (Math.random()*4-2)); // J2/J3 slight variance
+  const tempScore3 = Math.min(100, tempScore1 + (Math.random()*4-2));
 
-  // Vibration score: degrades with simVib activity
-  // Proxy: check if vibration sim is running
-  const vs = 100; // will decay during vib sim naturally via drift
+  // Piezo scores — 0 at rest, drops with vibration
+  const p1s = Math.max(0, 100-(piezoSim[0]/1023)*100);
+  const p2s = Math.max(0, 100-(piezoSim[1]/1023)*100);
+  const p3s = Math.max(0, 100-(piezoSim[2]/1023)*100);
 
   // Drift score
   const ds = blLocked ? Math.max(0,100-Math.abs(smoothRate||0)*20) : 100;
 
   loadScore  = Math.round(ls);
-  tempScore  = Math.round(ts);
-  vibScore   = Math.round(vs);
+  tempScore  = Math.round((tempScore1+tempScore2+tempScore3)/3);
+  vibScore   = Math.round((p1s+p2s+p3s)/3);
   driftScore = Math.round(ds);
 
-  // Weighted composite
-  healthScore = Math.round(ls*0.4 + ts*0.3 + vs*0.2 + ds*0.1);
+  // Weighted composite — 3 joints, 7 inputs
+  healthScore = Math.round(
+    ls          * 0.25 +
+    tempScore1  * 0.10 +
+    tempScore2  * 0.10 +
+    tempScore3  * 0.10 +
+    p1s         * 0.15 +
+    p2s         * 0.15 +
+    p3s         * 0.15
+  );
 
-  // Failure probability (inverse of health, scaled with drift rate)
+  // Failure probability
   const baseProb = Math.max(1, 100-healthScore);
   const rateBonus = (smoothRate||0)*10;
   failProb = Math.min(99, Math.round(baseProb + rateBonus));
@@ -1253,6 +1271,33 @@ function calcHealthScores(v){
   } else {
     rul=null;
   }
+
+  // Update per-joint displays
+  const setHB2=(id,val)=>{
+    const c=val>=70?'#56d364':val>=40?'#e3b341':'#f85149';
+    const el=document.getElementById('hb-'+id);
+    const vEl=document.getElementById('hb-'+id+'-v');
+    if(el){el.style.width=Math.max(0,val)+'%';el.style.background=c;}
+    if(vEl){vEl.textContent=Math.max(0,Math.round(val));vEl.style.color=c;}
+  };
+  setHB2('t2', Math.round(tempScore2));
+  setHB2('t3', Math.round(tempScore3));
+  setHB2('v2', Math.round(p2s));
+  setHB2('v3', Math.round(p3s));
+
+  // Update data feed temps
+  const tc=tempRaw<=35?'#56d364':tempRaw<=40?'#e3b341':'#f85149';
+  const setDT=(id,val,col)=>{const e=document.getElementById(id);if(e){e.textContent=val;e.style.color=col||'#56d364';}};
+  setDT('dt-t1', tempRaw.toFixed(0)+'°C', tc);
+  setDT('dt-t2', (tempRaw+0.3).toFixed(0)+'°C', tc);
+  setDT('dt-t3', (tempRaw-0.2).toFixed(0)+'°C', tc);
+  const pc=(x)=>x>600?'#f85149':x>300?'#e3b341':'#484f58';
+  setDT('dt-p1', piezoSim[0].toFixed(0), pc(piezoSim[0]));
+  setDT('dt-p2', piezoSim[1].toFixed(0), pc(piezoSim[1]));
+  setDT('dt-p3', piezoSim[2].toFixed(0), pc(piezoSim[2]));
+
+  // Decay piezos
+  for(let i=0;i<3;i++) piezoSim[i]=Math.max(0,piezoSim[i]*0.96);
 }
 
 // ── UPDATE TWIN DISPLAY ──────────────────────────────
