@@ -92,8 +92,8 @@ button.ctrl.primary{border-color:#1f6feb;color:#79c0ff}
 
 <div id="header">
   <div>
-    <h1>⚡ POWER-SHIFT — ZERO TRUST REDUNDANCY MATRIX</h1>
-    <div class="subtitle">INDUSTRIAL OT SECURITY  |  CONTINUOUS VERIFICATION  |  ROLE-BASED PHYSICAL ACCESS CONTROL</div>
+    <h1>🤖 UR10e ZTA TRUST-BROKER — JOINT INTEGRITY MONITOR</h1>
+    <div class="subtitle">UR10e COBOT  |  6-JOINT MICRO-SEGMENTATION  |  CONTINUOUS POWER VERIFICATION  |  MFA RECOVERY</div>
   </div>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
     <span class="badge badge-zta">ZTA ENABLED</span>
@@ -105,33 +105,33 @@ button.ctrl.primary{border-color:#1f6feb;color:#79c0ff}
 
   <!-- ROW 1: WAVEFORM -->
   <div class="panel" id="wave-panel">
-    <div class="panel-title"><div class="dot" style="background:#58a6ff"></div>CONTINUOUS HARDWARE VERIFICATION — VOLTAGE WAVEFORM (POLLED EVERY 1ms)</div>
+    <div class="panel-title"><div class="dot" style="background:#58a6ff"></div>ELBOW JOINT LOAD — CONTINUOUS POLLING (ZTA: never trust, always verify)</div>
     <canvas id="wave-canvas"></canvas>
     <div class="wave-info">
-      <div class="wi"><div class="line" style="background:#f85149"></div><span>SURGE &gt;300V</span></div>
-      <div class="wi"><div class="line" style="background:#56d364"></div><span>NORMAL 140–300V</span></div>
-      <div class="wi"><div class="line" style="background:#e3b341"></div><span>BROWNOUT &lt;140V</span></div>
-      <div class="wi" style="margin-left:auto"><span style="color:#484f58">ZTA Principle: </span><span style="color:#bc8cff">Never trust the hardware — always verify</span></div>
+      <div class="wi"><div class="line" style="background:#f85149"></div><span>OVERLOAD &gt;75%</span></div>
+      <div class="wi"><div class="line" style="background:#56d364"></div><span>NOMINAL 25–75%</span></div>
+      <div class="wi"><div class="line" style="background:#e3b341"></div><span>STALL &lt;25%</span></div>
+      <div class="wi" style="margin-left:auto"><span style="color:#484f58">ZTA Principle: </span><span style="color:#bc8cff">Micro-segment failing joints · Keep rest of arm online</span></div>
     </div>
   </div>
 
   <!-- ROW 2 COL 1: GAUGE -->
   <div class="panel" id="gauge-panel">
-    <div class="panel-title" style="width:100%"><div class="dot" style="background:#56d364"></div>GRID VOLTAGE</div>
+    <div class="panel-title" style="width:100%"><div class="dot" style="background:#56d364"></div>JOINT LOAD</div>
     <div id="gauge-wrap">
       <svg id="gauge-svg" viewBox="0 0 160 160">
         <path id="g-bg"  d="" fill="none" stroke="#21262d" stroke-width="12" stroke-linecap="round"/>
         <path id="g-arc" d="" fill="none" stroke="#56d364" stroke-width="10" stroke-linecap="round"/>
       </svg>
       <div id="gauge-value">
-        <div id="gauge-v" style="color:#56d364">220V</div>
-        <div id="gauge-lbl">GRID VOLTAGE</div>
+        <div id="gauge-v" style="color:#56d364">50%</div>
+        <div id="gauge-lbl">JOINT LOAD</div>
       </div>
     </div>
     <div class="zone-row">
-      <span style="color:#e3b341">BROWNOUT</span>
+      <span style="color:#e3b341">STALL</span>
       <span style="color:#56d364">SAFE</span>
-      <span style="color:#f85149">SURGE</span>
+      <span style="color:#f85149">OVERLOAD</span>
     </div>
     <!-- Relay status -->
     <div style="width:100%;margin-top:10px">
@@ -279,9 +279,9 @@ button.ctrl.primary{border-color:#1f6feb;color:#79c0ff}
 <div id="controls">
   <span>VOLTAGE:</span>
   <input type="range" id="volt-slider" min="0" max="440" value="220" oninput="setVoltage(this.value)"/>
-  <span id="volt-disp">220V</span>
-  <button class="ctrl" onclick="simSurge()">⚡ SURGE</button>
-  <button class="ctrl" onclick="simBrownout()">📉 BROWNOUT</button>
+  <span id="volt-disp">50%</span>
+  <button class="ctrl" onclick="simSurge()">⚡ OVERLOAD</button>
+  <button class="ctrl" onclick="simBrownout()">📉 STALL</button>
   <button class="ctrl" style="color:#bc8cff;border-color:#bc8cff" onclick="scanCard('A')">🪪 Card A (Worker)</button>
   <button class="ctrl" style="color:#58a6ff;border-color:#58a6ff" onclick="scanCard('B')">🪪 Card B (Tech)</button>
   <button class="ctrl" style="color:#bc8cff;border-color:#bc8cff" onclick="scanCard('C')">🪪 Card C (Engineer)</button>
@@ -295,7 +295,7 @@ const CORRECT_PIN = '1234'; // Maintenance tech PIN
 const ENGINEER_PIN = '9999'; // Engineer PIN
 
 let voltage = 220;
-let sysState = 'NORMAL'; // NORMAL | FAULT | MFA_RFID | MFA_PIN | LOCKED
+let sysState = 'NOMINAL'; // NOMINAL | FAULT | MFA_RFID | MFA_PIN | LOCKED
 let faultType = '';
 let rfidScanned = false;
 let currentRole = null;
@@ -347,7 +347,7 @@ function drawWave(){
 
 // ── SYSTEM STATE MACHINE ──────────────────────────────────────
 function triggerFault(type){
-  if(sysState!=='NORMAL') return;
+  if(sysState!=='NOMINAL') return;
   sysState='MFA_RFID';
   faultType=type;
   rfidScanned=false;
@@ -393,9 +393,9 @@ function triggerFault(type){
 }
 
 function scanCard(card){
-  if(sysState==='NORMAL'){
+  if(sysState==='NOMINAL'){
     // Normal op — show role access
-    showRoleAttempt(card,'NORMAL');
+    showRoleAttempt(card,'NOMINAL');
     return;
   }
   if(sysState!=='MFA_RFID') return;
@@ -474,7 +474,7 @@ function kpress(k){
 }
 
 function authSuccess(){
-  sysState='NORMAL';
+  sysState='NOMINAL';
   const ts=new Date().toLocaleTimeString();
   document.getElementById('factor2-val').textContent='VERIFIED ✓';
   document.getElementById('factor2-val').style.color='#56d364';
@@ -550,9 +550,9 @@ function renderLog(){
 function setVoltage(v){
   voltage=parseFloat(v);
   document.getElementById('volt-disp').textContent=Math.round(v)+'V';
-  if(sysState!=='NORMAL') return;
-  if(voltage>300) triggerFault('SURGE');
-  else if(voltage<140) triggerFault('BROWNOUT');
+  if(sysState!=='NOMINAL') return;
+  if(voltage>300) triggerFault('OVERLOAD');
+  else if(voltage<140) triggerFault('STALL');
 }
 
 function simSurge(){document.getElementById('volt-slider').value=400;setVoltage(400);}
@@ -582,7 +582,7 @@ function autoDemo(){
 // ── ANIMATION LOOP ─────────────────────────────────────────────
 function loop(){
   history.shift();
-  const noisy = sysState==='NORMAL' ? voltage+(Math.random()-0.5)*5 : voltage+(Math.random()-0.5)*3;
+  const noisy = sysState==='NOMINAL' ? voltage+(Math.random()-0.5)*5 : voltage+(Math.random()-0.5)*3;
   history.push(noisy);
   updateGauge(noisy);
   drawWave();
