@@ -123,6 +123,42 @@ body{background:#0d1117;color:#e6edf3;font-family:'Courier New',monospace;displa
 .mlog-item{font-size:8px;padding:2px 6px;border-left:2px solid #30363d;margin:2px 0;color:#8b949e}
 .mtbf-box{background:#161b22;border:1px solid #21262d;border-radius:5px;padding:8px;margin-top:8px}
 .mtbf-row{display:flex;justify-content:space-between;font-size:9px;margin:2px 0}
+
+/* INCIDENT REPORT MODAL */
+#report-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000a;z-index:1000;align-items:center;justify-content:center}
+#report-modal.show{display:flex}
+#report-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;width:700px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+#report-header{background:#010409;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #21262d;flex-shrink:0}
+#report-header h2{font-size:12px;letter-spacing:2px;color:#58a6ff}
+#report-body{padding:16px;overflow-y:auto;flex:1;font-size:10px;line-height:1.7}
+#report-footer{padding:10px 16px;border-top:1px solid #21262d;display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+.rbtn{padding:6px 16px;border-radius:5px;font-size:10px;cursor:pointer;font-family:monospace;font-weight:700}
+.rbtn-dl{background:#56d36422;border:1px solid #56d364;color:#56d364}
+.rbtn-dl:hover{background:#56d36444}
+.rbtn-cl{background:#21262d;border:1px solid #30363d;color:#8b949e}
+.rbtn-cl:hover{background:#30363d}
+
+/* Report sections */
+.r-section{margin-bottom:14px}
+.r-section h3{font-size:9px;letter-spacing:2px;color:#484f58;border-bottom:1px solid #21262d;padding-bottom:4px;margin-bottom:8px}
+.r-row{display:flex;gap:8px;margin:3px 0}
+.r-lbl{color:#484f58;min-width:160px;flex-shrink:0}
+.r-val{color:#e6edf3;font-weight:700}
+.r-step{display:flex;gap:8px;padding:5px 8px;border-radius:4px;margin:3px 0;border:1px solid #21262d;align-items:flex-start}
+.r-step-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px}
+.r-step-txt{flex:1}
+.r-step-title{font-weight:700;color:#e6edf3}
+.r-step-desc{color:#8b949e;font-size:9px}
+.r-step-time{font-size:8px;color:#484f58;margin-top:2px}
+.step-ok{background:#56d36411;border-color:#56d364}
+.step-ok .r-step-num{background:#56d36433;color:#56d364}
+.step-deny{background:#f8514911;border-color:#f85149}
+.step-deny .r-step-num{background:#f8514933;color:#f85149}
+.step-auth{background:#58a6ff11;border-color:#58a6ff}
+.step-auth .r-step-num{background:#58a6ff33;color:#58a6ff}
+.step-info{background:#161b22;border-color:#30363d}
+.step-info .r-step-num{background:#21262d;color:#8b949e}
+.r-verdict{padding:10px 14px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:1px;text-align:center;margin-top:8px}
 </style>
 </head>
 <body>
@@ -513,6 +549,7 @@ function triggerFault(reason){
   authState = 'AWAIT_RFID';
   setStatus('RED', load);
   addLog(reason+' FAULT', '#f85149');
+  newIncident(reason, load);
   setMsg('⚠ FAULT: '+reason+'\nScan RFID badge to begin MFA recovery.', '#f85149');
   ['ra-stat','rb-stat','rc-stat'].forEach(id=>{
     document.getElementById(id).textContent='IDLE';
@@ -529,6 +566,7 @@ function restoreJoint(){
   load = 50;
   document.getElementById('vslider').value = 50;
   setStatus('GREEN', 50);
+  resolveIncident(currentCard==='B'?'Maintenance Tech (Card B)':'Plant Engineer (Card C)');
   addLog('RESET OK — Card '+currentCard, '#56d364');
   setMsg('✅ Joint restored. System nominal.', '#56d364');
   prevented++;
@@ -559,11 +597,14 @@ function scanCard(c){
   if(c==='A'){
     document.getElementById('ra-stat').textContent='DENIED';
     document.getElementById('ra-stat').style.color='#f85149';
+    incidentStep('ACCESS DENIED','Card A — Floor Worker','Insufficient clearance. Cannot reset joint. Maintenance tech required.','deny');
+    incident.humanErrors++;
     addLog('Card A DENIED — no clearance', '#e3b341');
     setMsg('🚫 ACCESS DENIED\nCard A (Floor Worker) has no reset clearance.\nCall maintenance tech.', '#f85149');
   } else {
     authState = 'AWAIT_PIN';
     document.getElementById(statIds[c]).textContent='AWAITING PIN';
+    incidentStep('FACTOR 1: RFID BADGE','Card '+c,'Badge verified — identity confirmed. Awaiting PIN (Factor 2).','auth');
     addLog('Card '+c+' scanned — Factor 1 OK', '#58a6ff');
     setMsg('✓ Badge verified (Factor 1 ✓)\nEnter PIN on keyboard:\n  Card B = 1234 | Card C = 9999', '#58a6ff');
   }
@@ -574,11 +615,14 @@ function submitPin(p){
   const correct = currentCard==='B'?'1234':'9999';
   if(p===correct){
     authState = 'POKA';
+    incidentStep('FACTOR 2: PIN VERIFIED','Card '+currentCard,'Both authentication factors confirmed. Proceeding to Poka-Yoke checklist.','auth');
     addLog('PIN OK — Factor 2 verified', '#56d364');
     setMsg('✅ Both factors verified.\nComplete safety checklist to restore joint.','#56d364');
     setTimeout(startPoka, 400);
   } else {
     pin = '';
+    incident.humanErrors++;
+    incidentStep('WRONG PIN ATTEMPT','Card '+currentCard,'Incorrect PIN entered. Access denied. Retry required.','deny');
     addLog('Wrong PIN attempt','#e3b341');
     setMsg('❌ Wrong PIN. Try again.\n  Card B = 1234 | Card C = 9999','#f85149');
   }
@@ -622,8 +666,11 @@ function confirmPoka(key){
   el.className='pstep done';
   el.querySelector('.step-num').style.background='#56d364';
   pokaStep++;
+  incident.pokaStepsCompleted=pokaStep;
+  incidentStep('CHECKLIST STEP '+pokaStep+' CONFIRMED',currentCard?'Card '+currentCard:'Technician',POKA_STEPS[pokaStep-1]+' — verified and signed off.','ok');
   if(pokaStep>=5){
     pokaActive=false;
+    incident.pokaStepsCompleted=5;
     setMsg('✅ All 5 steps confirmed.\nRestoring joint...','#56d364');
     setTimeout(()=>restoreJoint(),1200);
   } else {
@@ -973,6 +1020,183 @@ function updateEW(v){
   }
 }
 
+
+// ══════════════════════════════════════════════════════
+// INCIDENT TRACKING
+// ══════════════════════════════════════════════════════
+let incident = {
+  id: null,
+  faultTime: null,
+  faultReason: null,
+  faultLoad: null,
+  steps: [],       // {time, action, actor, result, type}
+  resolvedTime: null,
+  resolvedBy: null,
+  pokaStepsCompleted: 0,
+  humanErrors: 0,
+  durationMs: null,
+};
+
+function newIncident(reason, loadVal){
+  incident = {
+    id: 'RPT-'+Date.now().toString().slice(-6),
+    faultTime: new Date(),
+    faultReason: reason,
+    faultLoad: loadVal.toFixed(1),
+    steps: [],
+    resolvedTime: null,
+    resolvedBy: null,
+    pokaStepsCompleted: 0,
+    humanErrors: 0,
+    durationMs: null,
+  };
+  incident.steps.push({
+    time: new Date(),
+    action: 'FAULT DETECTED',
+    actor: 'ZTA Policy Engine',
+    result: reason+' — Joint isolated. Relay opened. Micro-segmentation active.',
+    type: 'info'
+  });
+}
+
+function incidentStep(action, actor, result, type){
+  if(!incident.id) return;
+  incident.steps.push({ time:new Date(), action, actor, result, type });
+}
+
+function resolveIncident(tech){
+  if(!incident.id) return;
+  incident.resolvedTime = new Date();
+  incident.resolvedBy = tech;
+  incident.durationMs = incident.resolvedTime - incident.faultTime;
+  incident.steps.push({
+    time: new Date(),
+    action: 'JOINT RESTORED',
+    actor: tech||'Unknown',
+    result: 'All 5 Poka-Yoke steps confirmed. Relay closed. Motor running. Audit trail complete.',
+    type: 'ok'
+  });
+  document.getElementById('report-id').textContent = incident.id;
+}
+
+// ── REPORT RENDER ──────────────────────────────────────
+function openReport(){
+  buildReport();
+  document.getElementById('report-modal').classList.add('show');
+}
+function closeReport(){
+  document.getElementById('report-modal').classList.remove('show');
+}
+
+function buildReport(){
+  const body = document.getElementById('report-body');
+  const inc  = incident;
+  const hasData = inc.id !== null;
+  const now = new Date();
+  const rptTime = now.toLocaleString('en-CA',{dateStyle:'full',timeStyle:'medium'});
+  const duration = inc.durationMs ? Math.round(inc.durationMs/1000)+'s ('+Math.round(inc.durationMs/60000)+' min)' : '—';
+
+  body.innerHTML = `
+    <!-- HEADER META -->
+    <div class="r-section">
+      <h3>REPORT INFORMATION</h3>
+      <div class="r-row"><span class="r-lbl">Report ID</span><span class="r-val">${inc.id||'No incident recorded yet'}</span></div>
+      <div class="r-row"><span class="r-lbl">Generated</span><span class="r-val">${rptTime}</span></div>
+      <div class="r-row"><span class="r-lbl">Facility</span><span class="r-val">Honda of Canada Mfg. — Alliston, Ontario</span></div>
+      <div class="r-row"><span class="r-lbl">System</span><span class="r-val">Power-Shift ZTA Redundancy Matrix v1.0</span></div>
+      <div class="r-row"><span class="r-lbl">Asset</span><span class="r-val">UR10e Collaborative Robot — Joint Monitor</span></div>
+    </div>
+
+    <!-- FAULT SUMMARY -->
+    <div class="r-section">
+      <h3>FAULT SUMMARY</h3>
+      <div class="r-row"><span class="r-lbl">Fault type</span><span class="r-val" style="color:#f85149">${inc.faultReason||'—'}</span></div>
+      <div class="r-row"><span class="r-lbl">Load at fault</span><span class="r-val">${inc.faultLoad?inc.faultLoad+'%':'—'}</span></div>
+      <div class="r-row"><span class="r-lbl">Fault detected</span><span class="r-val">${inc.faultTime?inc.faultTime.toLocaleTimeString():'—'}</span></div>
+      <div class="r-row"><span class="r-lbl">Resolved at</span><span class="r-val" style="color:#56d364">${inc.resolvedTime?inc.resolvedTime.toLocaleTimeString():'UNRESOLVED'}</span></div>
+      <div class="r-row"><span class="r-lbl">Total downtime</span><span class="r-val" style="color:#e3b341">${duration}</span></div>
+      <div class="r-row"><span class="r-lbl">Resolved by</span><span class="r-val">${inc.resolvedBy||'—'}</span></div>
+      <div class="r-row"><span class="r-lbl">Human errors logged</span><span class="r-val" style="color:${inc.humanErrors>0?'#f85149':'#56d364'}">${inc.humanErrors} (${inc.humanErrors===0?'None — clean recovery':'See steps below'})</span></div>
+    </div>
+
+    <!-- REMEDIATION STEPS -->
+    <div class="r-section">
+      <h3>REMEDIATION STEPS TAKEN</h3>
+      ${hasData && inc.steps.length > 0 ? inc.steps.map((s,i)=>`
+        <div class="r-step step-${s.type}">
+          <div class="r-step-num">${i+1}</div>
+          <div class="r-step-txt">
+            <div class="r-step-title">${s.action}</div>
+            <div class="r-step-desc">${s.result}</div>
+            <div class="r-step-time">${s.time.toLocaleTimeString()} — ${s.actor}</div>
+          </div>
+        </div>
+      `).join('') : '<div style="color:#484f58;font-size:9px">Run a simulation and complete recovery to generate steps. Try AUTO DEMO.</div>'}
+    </div>
+
+    <!-- UR10e POKA-YOKE CHECKLIST -->
+    <div class="r-section">
+      <h3>UR10e MANUAL SAFETY CHECKLIST (Poka-Yoke)</h3>
+      ${['Workspace clear of all operators and bystanders',
+         'Joint visually inspected — no physical damage observed',
+         'Payload / TCP settings verified against last known config',
+         'Fault log reviewed — root cause identified and documented',
+         'Hazard resolved — not just acknowledged'].map((desc,i)=>`
+        <div class="r-step ${i < inc.pokaStepsCompleted ? 'step-ok' : 'step-info'}">
+          <div class="r-step-num">${i < inc.pokaStepsCompleted ? '✓' : (i+1)}</div>
+          <div class="r-step-txt">
+            <div class="r-step-title">Step ${i+1}: ${['Workspace Clear','Joint Inspection','Payload/TCP Verify','Fault Log Review','Hazard Resolution'][i]}</div>
+            <div class="r-step-desc">${desc}</div>
+            <div class="r-step-time" style="color:${i<inc.pokaStepsCompleted?'#56d364':'#484f58'}">${i<inc.pokaStepsCompleted?'✅ CONFIRMED by technician':'⬜ Not yet confirmed'}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- VERDICT -->
+    <div class="r-section">
+      <h3>COMPLIANCE VERDICT</h3>
+      ${inc.resolvedTime ? `
+        <div class="r-verdict" style="background:#56d36411;border:1px solid #56d364;color:#56d364">
+          ✅ COMPLIANT — All 5 UR10e manual steps completed. Full audit trail recorded.
+        </div>
+      ` : `
+        <div class="r-verdict" style="background:#e3b34111;border:1px solid #e3b341;color:#e3b341">
+          ⏳ PENDING — Incident not yet resolved. Complete recovery to generate final verdict.
+        </div>
+      `}
+      <div style="margin-top:8px;font-size:8px;color:#484f58;line-height:1.6">
+        Reference: UR10e User Manual §12.4 — "Never automatically acknowledge and reset a protective stop."<br>
+        This report was generated by the Power-Shift ZTA system and is suitable for HSE compliance review.
+      </div>
+    </div>
+  `;
+}
+
+function downloadReport(){
+  window.print();
+}
+
+// Print styles
+const printStyle=document.createElement('style');
+printStyle.textContent=`
+  @media print {
+    body > *:not(#report-modal){ display:none!important; }
+    #report-modal{ display:block!important; position:static!important; background:white!important; }
+    #report-box{ border:none!important; max-height:none!important; color:black!important; width:100%!important; }
+    #report-footer{ display:none!important; }
+    #report-body{ color:black!important; }
+    .r-lbl{ color:#666!important; }
+    .r-val{ color:#000!important; }
+    .r-step-title{ color:#000!important; }
+    .r-step-desc{ color:#444!important; }
+    #report-header{ background:#f0f0f0!important; color:#000!important; border:1px solid #ccc!important; }
+    #report-header h2{ color:#000!important; }
+    h3{ color:#333!important; }
+  }
+`;
+document.head.appendChild(printStyle);
+
 // ══════════════════════════════════════════════════════
 // MAIN LOOP
 // ══════════════════════════════════════════════════════
@@ -1030,5 +1254,21 @@ function loop(){
 
 requestAnimationFrame(loop);
 </script>
+
+<!-- INCIDENT REPORT MODAL -->
+<div id="report-modal">
+  <div id="report-box">
+    <div id="report-header">
+      <h2>📋 INCIDENT REPORT — UR10e JOINT FAULT</h2>
+      <span style="font-size:9px;color:#484f58" id="report-id">RPT-0000</span>
+    </div>
+    <div id="report-body"></div>
+    <div id="report-footer">
+      <button class="rbtn rbtn-dl" onclick="downloadReport()">⬇ DOWNLOAD PDF / PRINT</button>
+      <button class="rbtn rbtn-cl" onclick="closeReport()">✕ CLOSE</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
