@@ -863,9 +863,42 @@ function setLoad(v){
   load=parseFloat(v);
   document.getElementById('vdisp').textContent=Math.round(v)+'%';
 }
-function simAmber(){ document.getElementById('vslider').value=72; setLoad(72); }
-function simOverload(){ document.getElementById('vslider').value=88; setLoad(88); }
-function simStall(){ document.getElementById('vslider').value=15; setLoad(15); }
+// ── HELPER: set load + update hero immediately ───────────────
+function pushLoad(v){
+  v = Math.max(0, Math.min(100, v));
+  load = v;
+  const sl = document.getElementById('vslider');
+  const vd = document.getElementById('vdisp');
+  const hn = document.getElementById('hero-num');
+  if(sl) sl.value = Math.round(v);
+  if(vd) vd.textContent = Math.round(v)+'%';
+  // hero num colour
+  const c = v>=80?'#f85149':v>=65?'#e3b341':'#56d364';
+  if(hn){ hn.textContent=Math.round(v)+'%'; hn.style.color=c; }
+}
+
+// ── HELPER: clean start for every sim ────────────────────────
+function simStart(msg){
+  demoRunning = false; // let hardReset clear cleanly
+  if(vibTimer){ clearInterval(vibTimer); vibTimer=null; }
+  hardReset();
+  demoRunning = true;
+  const el = document.getElementById('mfa-msg');
+  if(el){ el.textContent = msg; el.style.color='#bc8cff'; }
+}
+
+function simAmber(){
+  simStart('SCENARIO: Caution zone — motor running hot');
+  setTimeout(()=>pushLoad(72), 100);
+}
+function simOverload(){
+  simStart('SCENARIO: Overload — joint exceeding max current');
+  setTimeout(()=>pushLoad(88), 100);
+}
+function simStall(){
+  simStart('SCENARIO: Stall — motor blocked, no rotation');
+  setTimeout(()=>pushLoad(12), 100);
+}
 function hardReset(){
   demoRunning=false;
   if(vibTimer){clearInterval(vibTimer);vibTimer=null;}
@@ -955,70 +988,55 @@ function checkAmberSavings(v) {
 
 // 1. GEAR WEAR — gradual load creep over time (predictive)
 function simGearWear(){
-  if(demoRunning) return; demoRunning=true; hardReset();
-  let v=50, t=null;
-  document.getElementById('mfa-msg').textContent='SCENARIO: Gear wear — watch load creep up slowly';
-  document.getElementById('mfa-msg').style.color='#bc8cff';
-  // Slowly increase load every 400ms simulating gear degrading
-  t=setInterval(()=>{
+  if(demoRunning) return;
+  simStart('SCENARIO: Gear wear — watch load creep up slowly');
+  let v=50;
+  const t=setInterval(()=>{
     if(jointDown){clearInterval(t);demoRunning=false;return;}
-    v+=1.2+(Math.random()*0.8);
-    if(v>100) v=100;
-    document.getElementById('vslider').value=Math.round(v);
-    setLoad(v);
+    v += 1.2 + (Math.random()*0.8);
+    pushLoad(v);
     if(v>=80){clearInterval(t);demoRunning=false;}
   },400);
 }
 
-// 2. VIBRATION FAULT — erratic load readings (loose joint bolt)
+// 2. VIBRATION FAULT
 let vibTimer=null;
 function simVibration(){
-  if(demoRunning) return; demoRunning=true; hardReset();
-  document.getElementById('mfa-msg').textContent='SCENARIO: Loose bolt — erratic load spikes';
-  document.getElementById('mfa-msg').style.color='#bc8cff';
+  if(demoRunning) return;
+  simStart('SCENARIO: Loose bolt — erratic load spikes');
   let base=52, cycle=0;
   vibTimer=setInterval(()=>{
     if(jointDown){clearInterval(vibTimer);demoRunning=false;return;}
     cycle++;
-    // Random violent spikes simulating vibration
     const spike = cycle%8===0 ? base+30+(Math.random()*20) : base+(Math.random()-0.5)*8;
-    const v=Math.max(0,Math.min(100,spike));
-    document.getElementById('vslider').value=Math.round(v);
-    setLoad(v);
+    pushLoad(spike);
   },250);
 }
 
-// 3. THERMAL OVERLOAD — sustained high load causing overheat
+// 3. THERMAL OVERLOAD
 function simThermal(){
-  if(demoRunning) return; demoRunning=true; hardReset();
-  document.getElementById('mfa-msg').textContent='SCENARIO: Thermal overload — sustained high current';
-  document.getElementById('mfa-msg').style.color='#bc8cff';
+  if(demoRunning) return;
+  simStart('SCENARIO: Thermal overload — motor temp rising');
   let v=50, phase=0;
   const t=setInterval(()=>{
     if(jointDown){clearInterval(t);demoRunning=false;return;}
     phase++;
-    // Ramps to amber, holds, then tips into red
-    if(phase<10) v+=2;        // ramp up
-    else if(phase<20) v+=0.3; // hold in amber (thermal soak)
-    else v+=3;                // tip into fault
-    v=Math.min(100,v);
-    document.getElementById('vslider').value=Math.round(v);
-    setLoad(v);
+    if(phase<10)      v+=2;
+    else if(phase<20) v+=0.3;
+    else              v+=3;
+    pushLoad(v);
   },500);
 }
 
-// 4. CABLE SNAG — sudden load spike then recovery then spike again
+// 4. CABLE SNAG
 function simCableSnag(){
-  if(demoRunning) return; demoRunning=true; hardReset();
-  document.getElementById('mfa-msg').textContent='SCENARIO: External cable dragging on joint';
-  document.getElementById('mfa-msg').style.color='#bc8cff';
-  const sequence=[50,52,68,55,71,59,74,57,82]; // Irregular spikes
+  if(demoRunning) return;
+  simStart('SCENARIO: External cable dragging on joint');
+  const seq=[50,52,68,55,71,59,74,57,82];
   let i=0;
   const t=setInterval(()=>{
-    if(jointDown||i>=sequence.length){clearInterval(t);demoRunning=false;return;}
-    const v=sequence[i++];
-    document.getElementById('vslider').value=v;
-    setLoad(v);
+    if(jointDown||i>=seq.length){clearInterval(t);demoRunning=false;return;}
+    pushLoad(seq[i++]);
   },800);
 }
 
