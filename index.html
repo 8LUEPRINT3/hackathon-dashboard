@@ -227,16 +227,16 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
 
   <!-- Health Breakdown -->
   <div class="twin-card" style="min-width:200px">
-    <h4>HEALTH BREAKDOWN</h4>
+    <h4>HEALTH BREAKDOWN (7 SENSORS)</h4>
     <div id="health-breakdown">
-      <div class="hb-row"><span class="hb-lbl">Load (20%)</span><div class="hb-bar"><div class="hb-fill" id="hb-load" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-load-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J1 Temp (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-temp" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-temp-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J2 Temp (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t2" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t2-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J3 Temp (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t3" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t3-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J4 Motor (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t4" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t4-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J1 Vib (13%)</span><div class="hb-bar"><div class="hb-fill" id="hb-vib" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-vib-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J2 Vib (13%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v2" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v2-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J3 Vib (14%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v3" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v3-v">100</span></div>
+      
+      <div class="hb-row"><span class="hb-lbl">J1 Temp (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-temp" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-temp-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J2 Temp (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t2" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t2-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J3 Temp (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t3" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t3-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J4 Motor (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t4" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t4-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J1 Piezo (13%)</span><div class="hb-bar"><div class="hb-fill" id="hb-vib" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-vib-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J2 Piezo (13%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v2" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v2-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J3 Piezo (14%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v3" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v3-v">100</span></div>
     </div>
   </div>
 
@@ -1250,13 +1250,12 @@ function calcHealthScores(v){
   vibScore   = Math.round((p1s+p2s+p3s)/3);
   driftScore = Math.round(ds);
 
-  // Weighted composite — 4 temp sensors + 3 piezos + load = 8 inputs
+  // Weighted composite — 4 temp sensors + 3 piezos = 7 inputs (no potentiometer)
   healthScore = Math.round(
-    ls          * 0.20 +
-    tempScore1  * 0.10 +
-    tempScore2  * 0.10 +
-    tempScore3  * 0.10 +
-    tempScore4  * 0.10 +
+    tempScore1  * 0.15 +
+    tempScore2  * 0.15 +
+    tempScore3  * 0.15 +
+    tempScore4  * 0.15 +
     p1s         * 0.13 +
     p2s         * 0.13 +
     p3s         * 0.14
