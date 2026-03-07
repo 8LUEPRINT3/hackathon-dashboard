@@ -704,7 +704,14 @@ function setLoad(v){
 function simAmber(){ document.getElementById('vslider').value=72; setLoad(72); }
 function simOverload(){ document.getElementById('vslider').value=88; setLoad(88); }
 function simStall(){ document.getElementById('vslider').value=15; setLoad(15); }
-function hardReset(){ load=50; document.getElementById('vslider').value=50; document.getElementById('vdisp').textContent='50%'; restoreJoint(); }
+function hardReset(){
+  demoRunning=false;
+  if(vibTimer){clearInterval(vibTimer);vibTimer=null;}
+  load=50;
+  document.getElementById('vslider').value=50;
+  document.getElementById('vdisp').textContent='50%';
+  restoreJoint();
+}
 
 let demoRunning=false;
 function autoDemo(){
@@ -718,9 +725,10 @@ function autoDemo(){
     [12000,()=>scanCard('A')],   // denied
     [14000,()=>scanCard('B')],   // factor 1
     [16000,()=>{ authState='AWAIT_PIN'; pin='1234'; document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter'})); }],
-    [19000,()=>{ demoRunning=false; }],
-  ];
-  steps.forEach(([t,fn])=>setTimeout(fn,t));
+      [19000,()=>{ demoRunning=false; document.getElementById('mfa-msg').textContent='DEMO COMPLETE'; }],
+    ];
+    steps.forEach(([t,fn])=>setTimeout(fn,t));
+  },100);
 }
 
 
@@ -1175,25 +1183,7 @@ document.addEventListener('keydown', e => {
 });
 
 // Update autoDemo to go through poka-yoke too
-function autoDemo(){
-  if(demoRunning) return; demoRunning=true; hardReset();
-  const steps=[
-    [0,    ()=>setLoad(50)],
-    [1500, ()=>{ document.getElementById('vslider').value=70; setLoad(70); }],  // amber
-    [3500, ()=>{ document.getElementById('vslider').value=85; setLoad(85); }],  // FAULT
-    [5500, ()=>scanCard('A')],   // denied
-    [7500, ()=>scanCard('B')],   // factor 1
-    [9500, ()=>{ authState='AWAIT_PIN'; pin='1234'; document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter'})); }],
-    // Poka-Yoke steps auto-confirm
-    [11500,()=>confirmPokaStep('1')],
-    [12500,()=>confirmPokaStep('2')],
-    [13500,()=>confirmPokaStep('3')],
-    [14500,()=>confirmPokaStep('4')],
-    [15500,()=>confirmPokaStep('5')],
-    [18000,()=>{ demoRunning=false; }],
-  ];
-  steps.forEach(([t,fn])=>setTimeout(fn,t));
-}
+// duplicate autoDemo removed
 
 </script>
 </body>
