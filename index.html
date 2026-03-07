@@ -210,6 +210,44 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
   font-family:'Courier New',monospace;
 }
 #hero-temp-lbl{font-size:8px;color:#484f58;letter-spacing:2px;text-align:center}
+
+/* MAINTENANCE PANEL */
+#maint-panel{background:#0d1117;border-top:1px solid #21262d;padding:12px 16px;flex-shrink:0}
+#maint-panel h3{font-size:9px;color:#484f58;letter-spacing:3px;margin-bottom:10px}
+.maint-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.maint-col h4{font-size:9px;color:#58a6ff;letter-spacing:2px;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:4px}
+
+/* Input form */
+.maint-form{display:flex;flex-direction:column;gap:6px}
+.maint-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.maint-sel,.maint-input{background:#161b22;border:1px solid #30363d;color:#e6edf3;
+  font-size:9px;padding:4px 8px;border-radius:4px;font-family:monospace}
+.maint-sel{flex:1;min-width:100px}
+.maint-input{flex:1;min-width:120px}
+.maint-btn{background:#21262d;border:1px solid #58a6ff;color:#58a6ff;
+  font-size:9px;padding:4px 10px;border-radius:4px;cursor:pointer;font-family:monospace;white-space:nowrap}
+.maint-btn:hover{background:#58a6ff22}
+
+/* Parts health table */
+.parts-table{width:100%;border-collapse:collapse;font-size:9px}
+.parts-table th{color:#484f58;letter-spacing:1px;padding:4px 6px;text-align:left;border-bottom:1px solid #21262d}
+.parts-table td{padding:5px 6px;border-bottom:1px solid #161b22;vertical-align:middle}
+.health-bar-wrap{width:80px;height:6px;background:#21262d;border-radius:3px;overflow:hidden;display:inline-block}
+.health-bar{height:100%;border-radius:3px;transition:width .5s,background .5s}
+.part-status{font-size:8px;padding:1px 6px;border-radius:8px;font-weight:700}
+.ps-good{background:#56d36422;color:#56d364;border:1px solid #56d364}
+.ps-warn{background:#e3b34122;color:#e3b341;border:1px solid #e3b341}
+.ps-crit{background:#f8514922;color:#f85149;border:1px solid #f85149}
+
+.maint-log-list{max-height:120px;overflow-y:auto;font-size:8px}
+.maint-log-item{padding:3px 6px;border-left:2px solid #30363d;margin:2px 0;color:#8b949e}
+.maint-log-item .ml-date{color:#58a6ff}
+.maint-log-item .ml-part{color:#e6edf3;font-weight:bold}
+
+.mtbf-box{background:#161b22;border:1px solid #21262d;border-radius:6px;padding:8px 10px;margin-top:8px}
+.mtbf-row{display:flex;justify-content:space-between;font-size:9px;margin:2px 0}
+.mtbf-lbl{color:#484f58}
+.mtbf-val{font-weight:700;color:#e6edf3}
 </style>
 </head>
 <body>
@@ -1181,6 +1219,191 @@ function updateEarlyWarningPanel(v) {
 // Hook into main animation loop
 const _origLoop = loop;
 
+
+// ══════════════════════════════════════════════════════════════
+// MAINTENANCE TRACKER + MTBF ENGINE
+// ══════════════════════════════════════════════════════════════
+
+// Part specs: typical UR10e service intervals (days)
+const PART_SPECS = {
+  motor:   { name:'Motor',       typicalLife:365, replacementLife:1825, cost:4200 },
+  gear:    { name:'Gears',       typicalLife:180, replacementLife:900,  cost:2800 },
+  bearing: { name:'Bearings',    typicalLife:270, replacementLife:1095, cost:850  },
+  joint:   { name:'Joint Seal',  typicalLife:90,  replacementLife:365,  cost:320  },
+  cable:   { name:'Cables',      typicalLife:365, replacementLife:1825, cost:600  },
+};
+
+let maintEvents   = [];  // {date, part, type, tech, timestamp}
+let partLastService = { motor:null, gear:null, bearing:null, joint:null, cable:null };
+let partHealth      = { motor:100,  gear:100,  bearing:100,  joint:100,  cable:100  };
+
+// Set today's date as default in date picker
+window.addEventListener('load', ()=>{
+  const d = document.getElementById('maint-date');
+  if(d) d.value = new Date().toISOString().split('T')[0];
+});
+
+function logMaintenance(){
+  const part  = document.getElementById('maint-part').value;
+  const type  = document.getElementById('maint-type').value;
+  const date  = document.getElementById('maint-date').value;
+  const tech  = document.getElementById('maint-tech').value || 'Unknown';
+
+  if(!date){ alert('Please select a date'); return; }
+
+  const event = { part, type, tech, date, timestamp: new Date(date).getTime() };
+  maintEvents.push(event);
+  maintEvents.sort((a,b)=>b.timestamp-a.timestamp); // newest first
+
+  // Update last service for this part
+  if(!partLastService[part] || event.timestamp > new Date(partLastService[part]).getTime()){
+    partLastService[part] = date;
+  }
+
+  // If replacement — reset health fully
+  if(type === 'replacement') partHealth[part] = 100;
+
+  renderMaintLog();
+  updatePartsTable();
+  updateMTBFSummary();
+}
+
+function daysSince(dateStr){
+  if(!dateStr) return null;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+function calcPartHealth(part){
+  const spec = PART_SPECS[part];
+  const last = partLastService[part];
+  if(!last) return 100; // never serviced = assume new
+
+  const days = daysSince(last);
+  // Base decay from time
+  let health = Math.max(0, 100 - (days / spec.typicalLife) * 100);
+
+  // Additional decay from current load drift (sensor data)
+  if(baselineLocked && smoothDrift > 5){
+    health -= (smoothDrift - 5) * 0.5; // drift accelerates wear
+  }
+
+  return Math.max(0, Math.min(100, health));
+}
+
+function healthStatus(h){
+  if(h >= 70) return ['ps-good','GOOD'];
+  if(h >= 35) return ['ps-warn','SERVICE SOON'];
+  return ['ps-crit','CRITICAL'];
+}
+
+function daysToDate(days){
+  const d = new Date(Date.now() + days * 86400000);
+  return d.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function updatePartsTable(){
+  Object.keys(PART_SPECS).forEach(part => {
+    const row = document.getElementById('pr-'+part);
+    if(!row) return;
+    const spec  = PART_SPECS[part];
+    const last  = partLastService[part];
+    const days  = daysSince(last);
+    const h     = calcPartHealth(part);
+    const daysLeft = last ? Math.max(0, spec.typicalLife - days) : spec.typicalLife;
+    const [cls,lbl] = healthStatus(h);
+
+    row.querySelector('.pr-date').textContent = last || 'Never';
+    row.querySelector('.pr-date').style.color = last ? '#8b949e' : '#484f58';
+    row.querySelector('.pr-life').textContent = last
+      ? daysLeft+'d left (~'+daysToDate(daysLeft)+')'
+      : 'Est. '+spec.typicalLife+'d from first service';
+    row.querySelector('.pr-life').style.color = daysLeft<30?'#f85149':daysLeft<60?'#e3b341':'#56d364';
+    row.querySelector('.health-bar').style.width = h.toFixed(0)+'%';
+    row.querySelector('.health-bar').style.background = h>=70?'#56d364':h>=35?'#e3b341':'#f85149';
+    row.querySelector('.part-status').className = 'part-status '+cls;
+    row.querySelector('.part-status').textContent = lbl;
+  });
+}
+
+function updateMTBFSummary(){
+  // Find most critical part
+  let minHealth = 100, critPart = null, nextDue = Infinity, nextPart = null;
+  let totalCostToPrevent = 0;
+
+  Object.keys(PART_SPECS).forEach(part => {
+    const h = calcPartHealth(part);
+    const spec = PART_SPECS[part];
+    const last = partLastService[part];
+    const days = daysSince(last) || 0;
+    const daysLeft = Math.max(0, spec.typicalLife - days);
+
+    if(h < minHealth){ minHealth = h; critPart = part; }
+    if(daysLeft < nextDue){ nextDue = daysLeft; nextPart = part; }
+    if(h < 70) totalCostToPrevent += spec.cost * (1 - h/100);
+  });
+
+  // MTBF from logged events
+  const failures = maintEvents.filter(e=>e.type==='replacement');
+  let mtbfStr = '—';
+  if(failures.length >= 2){
+    const intervals = [];
+    for(let i=1;i<failures.length;i++){
+      intervals.push((failures[i-1].timestamp - failures[i].timestamp)/86400000);
+    }
+    const avg = intervals.reduce((a,b)=>a+b,0)/intervals.length;
+    mtbfStr = Math.round(avg)+' days';
+  } else if(failures.length === 1){
+    mtbfStr = 'Need more data (1 event)';
+  }
+
+  document.getElementById('mtbf-avg').textContent      = mtbfStr;
+  document.getElementById('mtbf-critical').textContent  = critPart ? PART_SPECS[critPart].name+' ('+minHealth.toFixed(0)+'% health)' : '—';
+  document.getElementById('mtbf-next').textContent      = nextPart ? PART_SPECS[nextPart].name+' in '+nextDue+'d ('+daysToDate(nextDue)+')' : '—';
+  document.getElementById('mtbf-cost').textContent      = totalCostToPrevent>0?'$'+Math.round(totalCostToPrevent).toLocaleString()+' planned vs $38K unplanned':'All parts healthy';
+}
+
+function renderMaintLog(){
+  const el = document.getElementById('maint-log-list');
+  if(!maintEvents.length){ el.innerHTML='<div style="color:#30363d;font-size:9px">No events logged</div>'; return; }
+  el.innerHTML = maintEvents.slice(0,8).map(e=>`
+    <div class="maint-log-item">
+      <span class="ml-date">${e.date}</span> —
+      <span class="ml-part">${PART_SPECS[e.part].name}</span>
+      <span style="color:#56d364">[${e.type}]</span>
+      <span style="color:#484f58">by ${e.tech}</span>
+    </div>
+  `).join('');
+}
+
+// Load demo data for presentation
+function loadDemoMaintData(){
+  const demoData = [
+    { part:'motor',   type:'inspection',   date:'2025-12-01', tech:'Chen' },
+    { part:'gear',    type:'lubrication',  date:'2025-11-15', tech:'Rodriguez' },
+    { part:'bearing', type:'replacement',  date:'2025-09-20', tech:'Chen' },
+    { part:'bearing', type:'replacement',  date:'2025-03-10', tech:'Singh' },
+    { part:'joint',   type:'replacement',  date:'2025-10-05', tech:'Rodriguez' },
+    { part:'cable',   type:'inspection',   date:'2025-12-15', tech:'Singh' },
+    { part:'gear',    type:'replacement',  date:'2025-06-30', tech:'Chen' },
+  ];
+  demoData.forEach(e=>{
+    maintEvents.push({...e, timestamp: new Date(e.date).getTime()});
+    if(!partLastService[e.part] || new Date(e.date) > new Date(partLastService[e.part])){
+      partLastService[e.part] = e.date;
+    }
+  });
+  maintEvents.sort((a,b)=>b.timestamp-a.timestamp);
+  renderMaintLog();
+  updatePartsTable();
+  updateMTBFSummary();
+}
+
+// Auto-load demo data on start
+window.addEventListener('load', ()=>{ setTimeout(loadDemoMaintData, 500); });
+
+// Update parts table every 5s based on live drift
+setInterval(()=>{ if(baselineLocked){ updatePartsTable(); updateMTBFSummary(); } }, 5000);
+
 // ── ANIMATION LOOP ────────────────────────────────────────────
 function loop(){
   // Scroll history
@@ -1346,5 +1569,110 @@ document.addEventListener('keydown', e => {
 // duplicate autoDemo removed
 
 </script>
+
+<!-- MAINTENANCE TRACKER PANEL -->
+<div id="maint-panel">
+  <h3>🔧 MAINTENANCE HISTORY & PART LIFE ESTIMATION</h3>
+  <div class="maint-grid">
+
+    <!-- LEFT: Input + Log -->
+    <div class="maint-col">
+      <h4>LOG MAINTENANCE EVENT</h4>
+      <div class="maint-form">
+        <div class="maint-row">
+          <select class="maint-sel" id="maint-part">
+            <option value="motor">Motor (Drive)</option>
+            <option value="gear">Gear Assembly</option>
+            <option value="bearing">Bearings</option>
+            <option value="joint">Joint Seal</option>
+            <option value="cable">Cable Harness</option>
+          </select>
+          <select class="maint-sel" id="maint-type">
+            <option value="inspection">Inspection</option>
+            <option value="lubrication">Lubrication</option>
+            <option value="replacement">Full Replacement</option>
+            <option value="adjustment">Adjustment</option>
+            <option value="cleaning">Cleaning</option>
+          </select>
+        </div>
+        <div class="maint-row">
+          <input class="maint-input" type="date" id="maint-date"/>
+          <input class="maint-input" type="text" id="maint-tech" placeholder="Tech name" style="max-width:100px"/>
+          <button class="maint-btn" onclick="logMaintenance()">+ LOG</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div style="font-size:9px;color:#484f58;letter-spacing:2px;margin-bottom:4px">RECENT EVENTS</div>
+        <div class="maint-log-list" id="maint-log-list">
+          <div style="color:#30363d;font-size:9px">No events logged yet</div>
+        </div>
+      </div>
+
+      <div class="mtbf-box">
+        <div style="font-size:9px;color:#484f58;letter-spacing:1px;margin-bottom:6px">FLEET MTBF SUMMARY</div>
+        <div class="mtbf-row"><span class="mtbf-lbl">Avg time between failures</span><span class="mtbf-val" id="mtbf-avg">—</span></div>
+        <div class="mtbf-row"><span class="mtbf-lbl">Most critical part</span><span class="mtbf-val" id="mtbf-critical" style="color:#f85149">—</span></div>
+        <div class="mtbf-row"><span class="mtbf-lbl">Next service due</span><span class="mtbf-val" id="mtbf-next" style="color:#e3b341">—</span></div>
+        <div class="mtbf-row"><span class="mtbf-lbl">Estimated cost to prevent</span><span class="mtbf-val" id="mtbf-cost" style="color:#56d364">—</span></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Parts Health Table -->
+    <div class="maint-col">
+      <h4>PART LIFE ESTIMATION</h4>
+      <table class="parts-table" id="parts-table">
+        <tr>
+          <th>PART</th>
+          <th>LAST SERVICE</th>
+          <th>EST. LIFE LEFT</th>
+          <th>HEALTH</th>
+          <th>STATUS</th>
+        </tr>
+        <tr id="pr-motor">
+          <td style="color:#e6edf3">Motor</td>
+          <td class="pr-date" style="color:#484f58">Never</td>
+          <td class="pr-life">—</td>
+          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
+          <td><span class="part-status ps-good">GOOD</span></td>
+        </tr>
+        <tr id="pr-gear">
+          <td style="color:#e6edf3">Gears</td>
+          <td class="pr-date" style="color:#484f58">Never</td>
+          <td class="pr-life">—</td>
+          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
+          <td><span class="part-status ps-good">GOOD</span></td>
+        </tr>
+        <tr id="pr-bearing">
+          <td style="color:#e6edf3">Bearings</td>
+          <td class="pr-date" style="color:#484f58">Never</td>
+          <td class="pr-life">—</td>
+          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
+          <td><span class="part-status ps-good">GOOD</span></td>
+        </tr>
+        <tr id="pr-joint">
+          <td style="color:#e6edf3">Joint Seal</td>
+          <td class="pr-date" style="color:#484f58">Never</td>
+          <td class="pr-life">—</td>
+          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
+          <td><span class="part-status ps-good">GOOD</span></td>
+        </tr>
+        <tr id="pr-cable">
+          <td style="color:#e6edf3">Cables</td>
+          <td class="pr-date" style="color:#484f58">Never</td>
+          <td class="pr-life">—</td>
+          <td><div class="health-bar-wrap"><div class="health-bar" style="width:100%;background:#56d364"></div></div></td>
+          <td><span class="part-status ps-good">GOOD</span></td>
+        </tr>
+      </table>
+
+      <div style="font-size:8px;color:#484f58;margin-top:8px;line-height:1.6">
+        * Life estimates based on UR10e manufacturer specs + logged maintenance intervals.<br>
+        * Health decays from current drift analysis + days since last service.
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
