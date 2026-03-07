@@ -159,6 +159,45 @@ body{background:#0d1117;color:#e6edf3;font-family:'Courier New',monospace;displa
 .step-info{background:#161b22;border-color:#30363d}
 .step-info .r-step-num{background:#21262d;color:#8b949e}
 .r-verdict{padding:10px 14px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:1px;text-align:center;margin-top:8px}
+
+/* DIGITAL TWIN PANEL */
+#twin-bar{background:#010409;border-bottom:2px solid #21262d;padding:8px 16px;display:flex;gap:12px;align-items:center;flex-shrink:0;flex-wrap:wrap}
+#twin-bar h3{font-size:9px;color:#484f58;letter-spacing:3px;flex-shrink:0}
+
+.twin-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;align-items:center;min-width:120px;position:relative;transition:border-color .3s}
+.twin-card h4{font-size:8px;color:#484f58;letter-spacing:2px;margin-bottom:6px;text-align:center}
+.twin-big{font-size:32px;font-weight:900;font-family:'Courier New',monospace;transition:color .3s}
+.twin-sub{font-size:8px;color:#484f58;margin-top:2px;text-align:center}
+.twin-bar-wrap{width:100%;height:5px;background:#21262d;border-radius:3px;overflow:hidden;margin-top:5px}
+.twin-bar-fill{height:100%;border-radius:3px;transition:width .5s,background .5s}
+
+/* Health breakdown */
+#health-breakdown{display:flex;flex-direction:column;gap:3px;min-width:180px}
+.hb-row{display:flex;align-items:center;gap:6px;font-size:8px}
+.hb-lbl{color:#484f58;min-width:70px}
+.hb-bar{flex:1;height:4px;background:#21262d;border-radius:2px;overflow:hidden}
+.hb-fill{height:100%;border-radius:2px;transition:width .4s,background .4s}
+.hb-val{color:#e6edf3;min-width:28px;text-align:right;font-weight:700}
+
+/* Mode toggle */
+#mode-toggle{display:flex;gap:0;border:1px solid #30363d;border-radius:6px;overflow:hidden;flex-shrink:0;margin-left:auto}
+.mode-btn{padding:5px 14px;font-size:9px;font-family:monospace;cursor:pointer;border:none;font-weight:700;letter-spacing:1px;transition:all .2s}
+.mode-btn.active-sim{background:#bc8cff33;color:#bc8cff}
+.mode-btn.active-live{background:#56d36433;color:#56d364}
+.mode-btn.inactive{background:#161b22;color:#484f58}
+
+/* Probability ring */
+.prob-ring{position:relative;width:70px;height:70px;flex-shrink:0}
+#prob-canvas{width:70px;height:70px}
+.prob-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.prob-num{font-size:14px;font-weight:900;font-family:'Courier New',monospace}
+.prob-lbl{font-size:7px;color:#484f58}
+
+/* RUL */
+#rul-display{text-align:center}
+.rul-days{font-size:36px;font-weight:900;font-family:'Courier New',monospace;color:#56d364}
+.rul-unit{font-size:9px;color:#484f58;letter-spacing:1px}
+.rul-date{font-size:9px;color:#e3b341;margin-top:2px}
 </style>
 </head>
 <body>
@@ -173,6 +212,75 @@ body{background:#0d1117;color:#e6edf3;font-family:'Courier New',monospace;displa
 </div>
 
 <!-- HERO LOAD + SLIDER -->
+
+<!-- DIGITAL TWIN PANEL -->
+<div id="twin-bar">
+  <h3>🔬 DIGITAL TWIN</h3>
+
+  <!-- Joint Health Score -->
+  <div class="twin-card" id="health-card">
+    <h4>JOINT HEALTH SCORE</h4>
+    <div class="twin-big" id="health-score" style="color:#56d364">100%</div>
+    <div class="twin-bar-wrap"><div class="twin-bar-fill" id="health-bar" style="width:100%;background:#56d364"></div></div>
+    <div class="twin-sub" id="health-label">NOMINAL</div>
+  </div>
+
+  <!-- Health Breakdown -->
+  <div class="twin-card" style="min-width:200px">
+    <h4>HEALTH BREAKDOWN</h4>
+    <div id="health-breakdown">
+      <div class="hb-row"><span class="hb-lbl">Load (40%)</span><div class="hb-bar"><div class="hb-fill" id="hb-load" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-load-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">Temp (30%)</span><div class="hb-bar"><div class="hb-fill" id="hb-temp" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-temp-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">Vibration (20%)</span><div class="hb-bar"><div class="hb-fill" id="hb-vib" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-vib-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">Drift (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-drift" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-drift-v">100</span></div>
+    </div>
+  </div>
+
+  <!-- Failure Probability -->
+  <div class="twin-card">
+    <h4>FAILURE PROB (24h)</h4>
+    <div class="prob-ring">
+      <canvas id="prob-canvas" width="70" height="70"></canvas>
+      <div class="prob-center">
+        <div class="prob-num" id="prob-num" style="color:#56d364">4%</div>
+        <div class="prob-lbl">24h risk</div>
+      </div>
+    </div>
+    <div class="twin-sub" id="prob-label" style="margin-top:4px">LOW RISK</div>
+  </div>
+
+  <!-- RUL -->
+  <div class="twin-card">
+    <h4>REMAINING USEFUL LIFE</h4>
+    <div id="rul-display">
+      <div class="rul-days" id="rul-days">—</div>
+      <div class="rul-unit">DAYS REMAINING</div>
+      <div class="rul-date" id="rul-date">—</div>
+    </div>
+    <div class="twin-sub" id="rul-basis">Based on current degradation rate</div>
+  </div>
+
+  <!-- Live Data Feed -->
+  <div class="twin-card" style="min-width:150px">
+    <h4>TWIN DATA FEED</h4>
+    <div style="font-size:8px;line-height:2;width:100%">
+      <div style="display:flex;justify-content:space-between"><span style="color:#484f58">Load signal</span><span id="dt-load" style="color:#56d364">50.0%</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#484f58">Temperature</span><span id="dt-temp" style="color:#56d364">--°C</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#484f58">Drift Δ</span><span id="dt-drift" style="color:#484f58">0.0%</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#484f58">Sample rate</span><span style="color:#484f58">~12 Hz</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#484f58">Mode</span><span id="dt-mode" style="color:#bc8cff">SIM</span></div>
+    </div>
+  </div>
+
+  <!-- Mode Toggle -->
+  <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;margin-left:auto">
+    <div id="mode-toggle">
+      <button class="mode-btn active-sim" id="btn-sim"  onclick="setMode('SIM')">⚙ SIMULATION</button>
+      <button class="mode-btn inactive"   id="btn-live" onclick="setMode('LIVE')">📡 LIVE ARDUINO</button>
+    </div>
+    <div style="font-size:8px;color:#484f58;text-align:right" id="mode-desc">Running on simulated data — connect Arduino for live twin</div>
+  </div>
+</div>
 <div id="hero">
   <div>
     <div style="font-size:9px;color:#484f58;letter-spacing:2px;margin-bottom:2px">JOINT LOAD</div>
@@ -1022,6 +1130,216 @@ function updateEW(v){
 }
 
 
+
+// ══════════════════════════════════════════════════════
+// DIGITAL TWIN ENGINE
+// ══════════════════════════════════════════════════════
+
+let twinMode   = 'SIM';   // SIM | LIVE
+let vibScore   = 100;     // 0-100
+let tempScore  = 100;
+let loadScore  = 100;
+let driftScore = 100;
+let healthScore= 100;
+let failProb   = 4;       // % chance of failure in 24h
+let rul        = null;    // days remaining
+let livePort   = null;    // WebSerial port (if LIVE)
+let twTimer    = 0;
+
+function setMode(m){
+  twinMode = m;
+  document.getElementById('btn-sim').className  = 'mode-btn '+(m==='SIM'?'active-sim':'inactive');
+  document.getElementById('btn-live').className = 'mode-btn '+(m==='LIVE'?'active-live':'inactive');
+  document.getElementById('dt-mode').textContent = m;
+  document.getElementById('dt-mode').style.color = m==='LIVE'?'#56d364':'#bc8cff';
+
+  if(m==='LIVE'){
+    document.getElementById('mode-desc').textContent='📡 Live Arduino mode — connect via Web Serial';
+    document.getElementById('mode-desc').style.color='#56d364';
+    connectSerial();
+  } else {
+    document.getElementById('mode-desc').textContent='⚙ Simulation mode — use slider and buttons below';
+    document.getElementById('mode-desc').style.color='#484f58';
+  }
+}
+
+// Web Serial API — connect to real Arduino
+async function connectSerial(){
+  if(!('serial' in navigator)){
+    document.getElementById('mode-desc').textContent='⚠ Web Serial not supported — use Chrome/Edge browser';
+    document.getElementById('mode-desc').style.color='#e3b341';
+    setMode('SIM');
+    return;
+  }
+  try{
+    livePort = await navigator.serial.requestPort();
+    await livePort.open({baudRate:9600});
+    document.getElementById('mode-desc').textContent='✅ Arduino connected — receiving live data';
+    document.getElementById('mode-desc').style.color='#56d364';
+    readSerial();
+  } catch(e){
+    document.getElementById('mode-desc').textContent='⚠ Serial connect failed — '+e.message;
+    document.getElementById('mode-desc').style.color='#f85149';
+    setMode('SIM');
+  }
+}
+
+async function readSerial(){
+  const reader = livePort.readable.getReader();
+  let buf='';
+  try{
+    while(true){
+      const {value,done}=await reader.read();
+      if(done) break;
+      buf+=new TextDecoder().decode(value);
+      const lines=buf.split('\n');
+      buf=lines.pop();
+      lines.forEach(line=>{
+        // Expected: DATA|GREEN|52.1|24.3|0.2|0|OK
+        if(line.startsWith('DATA|')){
+          const p=line.split('|');
+          if(p.length>=6){
+            const liveLoad=parseFloat(p[2]);
+            const liveTemp=parseFloat(p[3]);
+            if(!isNaN(liveLoad)){
+              load=liveLoad;
+              document.getElementById('vslider').value=Math.round(liveLoad);
+              document.getElementById('dt-load').textContent=liveLoad.toFixed(1)+'%';
+            }
+            if(!isNaN(liveTemp)){
+              document.getElementById('dt-temp').textContent=liveTemp.toFixed(1)+'°C';
+              document.getElementById('h-temp').textContent=liveTemp.toFixed(0)+'°C';
+            }
+          }
+        }
+      });
+    }
+  } catch(e){ console.log('Serial read ended',e); }
+}
+
+// ── HEALTH SCORE CALCULATION ─────────────────────────
+function calcHealthScores(v){
+  // Load score: 100 at 50%, degrades toward 80% (fault)
+  const ls = v<=80 ? Math.max(0, 100-(Math.max(0,v-50)/30)*100) : 0;
+
+  // Temp score: based on hero-temp value
+  const tempRaw = parseFloat(document.getElementById('h-temp').textContent)||22;
+  const ts = tempRaw<=35?100:tempRaw<=40?Math.max(0,100-((tempRaw-35)/5)*100):0;
+
+  // Vibration score: degrades with simVib activity
+  // Proxy: check if vibration sim is running
+  const vs = 100; // will decay during vib sim naturally via drift
+
+  // Drift score
+  const ds = blLocked ? Math.max(0,100-Math.abs(smoothRate||0)*20) : 100;
+
+  loadScore  = Math.round(ls);
+  tempScore  = Math.round(ts);
+  vibScore   = Math.round(vs);
+  driftScore = Math.round(ds);
+
+  // Weighted composite
+  healthScore = Math.round(ls*0.4 + ts*0.3 + vs*0.2 + ds*0.1);
+
+  // Failure probability (inverse of health, scaled with drift rate)
+  const baseProb = Math.max(1, 100-healthScore);
+  const rateBonus = (smoothRate||0)*10;
+  failProb = Math.min(99, Math.round(baseProb + rateBonus));
+
+  // RUL in days
+  if((smoothRate||0)>0.01){
+    const minsLeft=(80-v)/(smoothRate/60);
+    rul=Math.max(0, minsLeft/60/24);
+  } else {
+    rul=null;
+  }
+}
+
+// ── UPDATE TWIN DISPLAY ──────────────────────────────
+function updateTwin(v){
+  if(Date.now()-twTimer<400) return;
+  twTimer=Date.now();
+
+  calcHealthScores(v);
+
+  const hc=healthScore>=70?'#56d364':healthScore>=40?'#e3b341':'#f85149';
+
+  // Health score card
+  document.getElementById('health-score').textContent=healthScore+'%';
+  document.getElementById('health-score').style.color=hc;
+  document.getElementById('health-bar').style.width=healthScore+'%';
+  document.getElementById('health-bar').style.background=hc;
+  document.getElementById('health-label').textContent=
+    healthScore>=85?'NOMINAL':healthScore>=70?'GOOD':healthScore>=50?'DEGRADING':'CRITICAL';
+  document.getElementById('health-label').style.color=hc;
+
+  // Breakdown bars
+  const setHB=(id,val)=>{
+    const c=val>=70?'#56d364':val>=40?'#e3b341':'#f85149';
+    document.getElementById('hb-'+id).style.width=val+'%';
+    document.getElementById('hb-'+id).style.background=c;
+    document.getElementById('hb-'+id+'-v').textContent=val;
+    document.getElementById('hb-'+id+'-v').style.color=c;
+  };
+  setHB('load', loadScore);
+  setHB('temp', tempScore);
+  setHB('vib',  vibScore);
+  setHB('drift',driftScore);
+
+  // Failure probability ring
+  drawProbRing(failProb);
+  const pc=failProb<20?'#56d364':failProb<50?'#e3b341':'#f85149';
+  document.getElementById('prob-num').textContent=failProb+'%';
+  document.getElementById('prob-num').style.color=pc;
+  document.getElementById('prob-label').textContent=
+    failProb<20?'LOW RISK':failProb<50?'MODERATE':'HIGH RISK';
+  document.getElementById('prob-label').style.color=pc;
+
+  // RUL
+  const rulEl=document.getElementById('rul-days');
+  if(rul!==null){
+    const days=Math.round(rul);
+    rulEl.textContent=days>0?days:'<1';
+    rulEl.style.color=days>30?'#56d364':days>7?'#e3b341':'#f85149';
+    const date=new Date(Date.now()+days*86400000);
+    document.getElementById('rul-date').textContent='Svc by: '+date.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
+    document.getElementById('rul-basis').textContent='At +'+((smoothRate||0).toFixed(2))+'%/min degradation';
+  } else {
+    rulEl.textContent='—';
+    rulEl.style.color='#56d364';
+    document.getElementById('rul-date').textContent='Stable — no fault projected';
+    document.getElementById('rul-basis').textContent='Load within normal range';
+  }
+
+  // Data feed
+  document.getElementById('dt-load').textContent=v.toFixed(1)+'%';
+  document.getElementById('dt-load').style.color=hc;
+  document.getElementById('dt-temp').textContent=(22+v*0.3).toFixed(0)+'°C';
+  if(blLocked){
+    const dr=((v-blAvg)/blAvg)*100;
+    document.getElementById('dt-drift').textContent=(dr>0?'+':'')+dr.toFixed(1)+'%';
+    document.getElementById('dt-drift').style.color=dr>5?'#e3b341':'#484f58';
+  }
+}
+
+function drawProbRing(prob){
+  const c=document.getElementById('prob-canvas');
+  if(!c) return;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,70,70);
+  const cx=35,cy=35,r=28;
+  const start=-Math.PI/2;
+
+  // Track
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='#21262d';ctx.lineWidth=6;ctx.stroke();
+
+  // Fill
+  const col=prob<20?'#56d364':prob<50?'#e3b341':'#f85149';
+  ctx.beginPath();ctx.arc(cx,cy,r,start,start+(Math.PI*2)*(prob/100));
+  ctx.strokeStyle=col;ctx.lineWidth=6;ctx.lineCap='round';ctx.stroke();
+}
+
 // ══════════════════════════════════════════════════════
 // INCIDENT TRACKING
 // ══════════════════════════════════════════════════════
@@ -1249,6 +1567,7 @@ function loop(){
   drawGauge(v);
   drawWave();
   updateEW(v);
+  updateTwin(v);
 
   requestAnimationFrame(loop);
 }
