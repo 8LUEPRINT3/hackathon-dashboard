@@ -2,344 +2,592 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<title>Power-Shift Redundancy Matrix</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Power-Shift ZTA Matrix</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height:100vh;display:flex;flex-direction:column}
-#header{padding:16px 24px;border-bottom:1px solid #21262d;display:flex;align-items:center;gap:16px}
-#header h1{font-size:18px;color:#f0f6fc;letter-spacing:2px}
-#header .subtitle{font-size:11px;color:#484f58}
-#demo-badge{margin-left:auto;background:#1f6feb22;border:1px solid #1f6feb;color:#79c0ff;padding:4px 12px;border-radius:12px;font-size:11px}
-#main{flex:1;display:grid;grid-template-columns:220px 1fr 220px;grid-template-rows:1fr auto;gap:1px;background:#21262d;overflow:hidden}
-.panel{background:#0d1117;padding:20px}
+body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;min-height:100vh;display:flex;flex-direction:column}
+/* HEADER */
+#header{padding:14px 20px;border-bottom:1px solid #21262d;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#header h1{font-size:16px;color:#f0f6fc;letter-spacing:2px}
+.subtitle{font-size:10px;color:#484f58}
+.badge{padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:1px}
+.badge-zta{background:#bc8cff22;border:1px solid #bc8cff;color:#bc8cff}
+.badge-live{background:#56d36422;border:1px solid #56d364;color:#56d364}
+.badge-fault{background:#f8514922;border:1px solid #f85149;color:#f85149;animation:flash 0.6s infinite}
+
+/* MAIN GRID */
+#main{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;gap:1px;background:#161b22}
+.panel{background:#0d1117;padding:16px}
+.panel-title{font-size:9px;color:#484f58;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.panel-title .dot{width:6px;height:6px;border-radius:50%}
+
+/* WAVEFORM — full width */
+#wave-panel{grid-column:1/-1}
+#wave-canvas{width:100%;height:120px;background:#080c11;border-radius:6px;display:block}
+.wave-info{display:flex;gap:16px;margin-top:6px;font-size:10px}
+.wi{display:flex;align-items:center;gap:5px}
+.wi .line{width:24px;height:2px;border-radius:1px}
 
 /* GAUGE */
-#gauge-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
-#gauge-wrap{position:relative;width:180px;height:180px}
-#gauge-svg{width:180px;height:180px}
+#gauge-panel{display:flex;flex-direction:column;align-items:center;gap:10px}
+#gauge-wrap{position:relative;width:160px;height:160px}
+#gauge-svg{width:160px;height:160px}
 #gauge-value{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-#gauge-v{font-size:32px;font-weight:700;color:#00d264}
-#gauge-label{font-size:10px;color:#484f58;letter-spacing:1px}
-.zone-labels{display:flex;justify-content:space-between;width:180px;font-size:9px;color:#484f58}
-
-/* WAVEFORM */
-#wave-panel{display:flex;flex-direction:column}
-#wave-panel h3{font-size:11px;color:#484f58;letter-spacing:1px;margin-bottom:8px}
-#wave-canvas{flex:1;width:100%;background:#080c11;border-radius:6px}
-.thresholds{display:flex;gap:16px;margin-top:6px;font-size:10px}
-.t-surge{color:#f85149}.t-normal{color:#56d364}.t-brown{color:#e3b341}
+#gauge-v{font-size:28px;font-weight:700}
+#gauge-lbl{font-size:9px;color:#484f58;letter-spacing:1px}
+.zone-row{display:flex;justify-content:space-between;width:160px;font-size:9px}
 
 /* STATUS */
-#status-panel{display:flex;flex-direction:column;gap:12px}
-.status-box{border-radius:8px;padding:14px;border:1px solid #21262d}
-.status-box h4{font-size:10px;letter-spacing:1px;margin-bottom:8px}
-.status-box .val{font-size:16px;font-weight:700}
-#sys-status{border-color:#56d364;background:#56d36411}
-#relay-box{display:flex;flex-direction:column;gap:8px}
-.relay-diagram{display:flex;align-items:center;gap:4px;padding:10px;background:#080c11;border-radius:6px}
-.wire{height:3px;flex:1;background:#56d364;border-radius:2px}
-.switch-open{width:24px;height:24px;border:3px solid #f85149;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#f85149}
-.switch-closed{width:24px;height:3px;background:#56d364;border-radius:2px}
-.motor{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+#status-panel{}
+.srow{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:6px;margin-bottom:6px;border:1px solid #21262d}
+.srow-label{font-size:10px;color:#484f58}
+.srow-val{font-size:12px;font-weight:700}
+
+/* ZTA PANEL */
+#zta-panel{grid-column:2/4}
+.zta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.zta-card{background:#080c11;border:1px solid #21262d;border-radius:8px;padding:12px}
+.zta-card h4{font-size:10px;color:#bc8cff;letter-spacing:1px;margin-bottom:8px}
+.zta-card p{font-size:10px;color:#484f58;line-height:1.6}
+.zta-status{font-size:11px;font-weight:700;margin-top:8px;padding:4px 8px;border-radius:4px;text-align:center}
+
+/* AUTH PANEL — full width */
+#auth-panel{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.auth-box{background:#080c11;border:1px solid #21262d;border-radius:8px;padding:14px}
+.auth-box h4{font-size:10px;letter-spacing:1px;margin-bottom:10px}
+
+/* RFID role display */
+.role-list{display:flex;flex-direction:column;gap:6px}
+.role-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;border:1px solid #21262d;font-size:10px}
+.role-badge{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700}
+
+/* KEYPAD */
+#keypad-display{background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 12px;font-size:16px;letter-spacing:4px;color:#58a6ff;text-align:center;margin-bottom:8px;min-height:36px}
+.kpad{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.kbtn{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:8px 4px;border-radius:4px;font-size:12px;cursor:pointer;text-align:center;font-family:monospace}
+.kbtn:hover{background:#21262d;border-color:#58a6ff}
+.kbtn:active{background:#1f6feb33}
+
+/* FAULT LOG */
+.log-entry{font-size:10px;padding:4px 0;border-bottom:1px solid #161b22;display:flex;gap:8px}
+.log-time{color:#484f58;flex-shrink:0}
 
 /* CONTROLS */
-#controls{grid-column:1/-1;background:#010409;border-top:1px solid #21262d;padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#controls{background:#010409;border-top:1px solid #21262d;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 #controls span{font-size:10px;color:#484f58}
-button{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;font-family:monospace}
-button:hover{background:#21262d}
-#volt-slider{flex:1;max-width:300px;accent-color:#58a6ff}
-#volt-display{font-size:13px;color:#58a6ff;min-width:60px}
+button.ctrl{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;font-family:monospace}
+button.ctrl:hover{background:#21262d}
+button.ctrl.danger{border-color:#f85149;color:#f85149}
+button.ctrl.primary{border-color:#1f6feb;color:#79c0ff}
+#volt-slider{flex:1;max-width:260px;accent-color:#58a6ff}
+#volt-disp{font-size:13px;color:#58a6ff;min-width:55px}
 
-/* Fault flash */
 @keyframes flash{0%,100%{opacity:1}50%{opacity:0.3}}
-.flashing{animation:flash 0.6s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #bc8cff44}50%{box-shadow:0 0 0 8px #bc8cff00}}
+.mfa-waiting{animation:pulse 1.5s infinite}
 </style>
 </head>
 <body>
 
 <div id="header">
   <div>
-    <h1>⚡ POWER-SHIFT REDUNDANCY MATRIX</h1>
-    <div class="subtitle">INDUSTRIAL GRID FAULT DETECTION — REAL-TIME MONITOR</div>
+    <h1>⚡ POWER-SHIFT — ZERO TRUST REDUNDANCY MATRIX</h1>
+    <div class="subtitle">INDUSTRIAL OT SECURITY  |  CONTINUOUS VERIFICATION  |  ROLE-BASED PHYSICAL ACCESS CONTROL</div>
   </div>
-  <div id="demo-badge">● SIMULATION MODE</div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <span class="badge badge-zta">ZTA ENABLED</span>
+    <span class="badge badge-live" id="sys-badge">● NOMINAL</span>
+  </div>
 </div>
 
 <div id="main">
-  <!-- LEFT: GAUGE -->
+
+  <!-- ROW 1: WAVEFORM -->
+  <div class="panel" id="wave-panel">
+    <div class="panel-title"><div class="dot" style="background:#58a6ff"></div>CONTINUOUS HARDWARE VERIFICATION — VOLTAGE WAVEFORM (POLLED EVERY 1ms)</div>
+    <canvas id="wave-canvas"></canvas>
+    <div class="wave-info">
+      <div class="wi"><div class="line" style="background:#f85149"></div><span>SURGE &gt;300V</span></div>
+      <div class="wi"><div class="line" style="background:#56d364"></div><span>NORMAL 140–300V</span></div>
+      <div class="wi"><div class="line" style="background:#e3b341"></div><span>BROWNOUT &lt;140V</span></div>
+      <div class="wi" style="margin-left:auto"><span style="color:#484f58">ZTA Principle: </span><span style="color:#bc8cff">Never trust the hardware — always verify</span></div>
+    </div>
+  </div>
+
+  <!-- ROW 2 COL 1: GAUGE -->
   <div class="panel" id="gauge-panel">
+    <div class="panel-title" style="width:100%"><div class="dot" style="background:#56d364"></div>GRID VOLTAGE</div>
     <div id="gauge-wrap">
-      <svg id="gauge-svg" viewBox="0 0 180 180">
-        <!-- Background arc -->
-        <path id="gauge-bg" d="" fill="none" stroke="#21262d" stroke-width="14" stroke-linecap="round"/>
-        <!-- Value arc -->
-        <path id="gauge-arc" d="" fill="none" stroke="#00d264" stroke-width="12" stroke-linecap="round"/>
+      <svg id="gauge-svg" viewBox="0 0 160 160">
+        <path id="g-bg"  d="" fill="none" stroke="#21262d" stroke-width="12" stroke-linecap="round"/>
+        <path id="g-arc" d="" fill="none" stroke="#56d364" stroke-width="10" stroke-linecap="round"/>
       </svg>
       <div id="gauge-value">
-        <div id="gauge-v">220V</div>
-        <div id="gauge-label">GRID VOLTAGE</div>
+        <div id="gauge-v" style="color:#56d364">220V</div>
+        <div id="gauge-lbl">GRID VOLTAGE</div>
       </div>
     </div>
-    <div class="zone-labels">
-      <span style="color:#e3b341">LOW</span>
-      <span style="color:#56d364">NORMAL</span>
+    <div class="zone-row">
+      <span style="color:#e3b341">BROWNOUT</span>
+      <span style="color:#56d364">SAFE</span>
       <span style="color:#f85149">SURGE</span>
     </div>
-  </div>
-
-  <!-- CENTER: WAVEFORM -->
-  <div class="panel" id="wave-panel">
-    <h3>VOLTAGE WAVEFORM — REAL-TIME</h3>
-    <canvas id="wave-canvas"></canvas>
-    <div class="thresholds">
-      <span class="t-surge">── SURGE >300V</span>
-      <span class="t-normal">── NORMAL 140–300V</span>
-      <span class="t-brown">── BROWNOUT &lt;140V</span>
-    </div>
-  </div>
-
-  <!-- RIGHT: STATUS -->
-  <div class="panel" id="status-panel">
-    <div class="status-box" id="sys-status">
-      <h4>SYSTEM STATE</h4>
-      <div class="val" id="state-val">● NOMINAL</div>
-      <div id="state-desc" style="font-size:10px;color:#484f58;margin-top:6px">All parameters within safe range</div>
-    </div>
-
-    <div class="status-box" style="background:#080c11">
-      <h4>RELAY STATUS</h4>
-      <div class="relay-diagram" id="relay-diagram">
-        <div class="wire"></div>
-        <div class="switch-closed" id="relay-switch"></div>
-        <div class="wire"></div>
-        <div class="motor" id="motor-icon" style="background:#56d36422;color:#56d364">M</div>
+    <!-- Relay status -->
+    <div style="width:100%;margin-top:10px">
+      <div class="srow">
+        <span class="srow-label">RELAY</span>
+        <span class="srow-val" id="relay-val" style="color:#56d364">CLOSED ●</span>
       </div>
-      <div id="relay-label" style="font-size:11px;color:#56d364;margin-top:8px">CLOSED — Motor Running</div>
-    </div>
-
-    <div class="status-box" style="background:#080c11">
-      <h4>RFID AUTH</h4>
-      <div id="rfid-status" style="font-size:12px;color:#484f58">Awaiting fault...</div>
-    </div>
-
-    <div class="status-box" style="background:#080c11">
-      <h4>FAULT LOG</h4>
-      <div id="fault-log" style="font-size:10px;color:#484f58;line-height:1.8">No faults recorded</div>
+      <div class="srow">
+        <span class="srow-label">MOTOR</span>
+        <span class="srow-val" id="motor-val" style="color:#56d364">RUNNING ▶</span>
+      </div>
+      <div class="srow">
+        <span class="srow-label">TRUST STATE</span>
+        <span class="srow-val" id="trust-val" style="color:#56d364">VERIFIED</span>
+      </div>
+      <div class="srow">
+        <span class="srow-label">MICRO-SEG</span>
+        <span class="srow-val" id="seg-val" style="color:#484f58">INACTIVE</span>
+      </div>
     </div>
   </div>
 
-  <!-- BOTTOM: CONTROLS -->
-  <div id="controls">
-    <span>SIMULATE VOLTAGE:</span>
-    <input type="range" id="volt-slider" min="0" max="440" value="220" oninput="setVoltage(this.value)"/>
-    <span id="volt-display">220V</span>
-    <button onclick="simSurge()">⚡ SURGE</button>
-    <button onclick="simBrownout()">📉 BROWNOUT</button>
-    <button onclick="scanRFID()">🪪 SCAN BADGE</button>
-    <button onclick="autoDemo()">▶ AUTO DEMO</button>
-    <button onclick="resetAll()" style="border-color:#f85149;color:#f85149">⟳ RESET</button>
+  <!-- ROW 2 COL 2+3: ZTA PRINCIPLES -->
+  <div class="panel" id="zta-panel">
+    <div class="panel-title"><div class="dot" style="background:#bc8cff"></div>ZERO TRUST ARCHITECTURE — ACTIVE ENFORCEMENT POINTS</div>
+    <div class="zta-grid">
+
+      <div class="zta-card">
+        <h4>① LEAST PRIVILEGE ACCESS</h4>
+        <p>Three RFID tiers. Each role has minimum permissions only. No implicit trust from prior access.</p>
+        <div class="zta-status" id="zta1-status" style="background:#56d36411;color:#56d364;border:1px solid #56d36444">ENFORCING</div>
+      </div>
+
+      <div class="zta-card">
+        <h4>② MULTI-FACTOR AUTH</h4>
+        <p>Badge alone is not enough. RFID (what you have) + 4-digit PIN (what you know) required to reset grid.</p>
+        <div class="zta-status" id="zta2-status" style="background:#58a6ff11;color:#58a6ff;border:1px solid #58a6ff44">STANDBY</div>
+      </div>
+
+      <div class="zta-card">
+        <h4>③ CONTINUOUS VERIFICATION</h4>
+        <p>Hardware polled every millisecond. Trust instantly revoked on anomaly. No grace period.</p>
+        <div class="zta-status" id="zta3-status" style="background:#56d36411;color:#56d364;border:1px solid #56d36444">ACTIVE</div>
+      </div>
+
+    </div>
+
+    <!-- Fault log -->
+    <div style="margin-top:12px">
+      <div class="panel-title"><div class="dot" style="background:#f85149"></div>FAULT LOG</div>
+      <div id="fault-log" style="font-size:10px;color:#484f58">No faults recorded.</div>
+    </div>
   </div>
+
+  <!-- ROW 3: AUTH PANEL -->
+  <div class="panel" id="auth-panel" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+
+    <!-- RFID Role System -->
+    <div class="auth-box">
+      <h4 style="color:#bc8cff">🪪 RFID ROLE-BASED ACCESS</h4>
+      <div class="role-list">
+        <div class="role-item" id="role-a" style="border-color:#21262d">
+          <span class="role-badge" style="background:#56d36422;color:#56d364">CARD A</span>
+          <div>
+            <div style="color:#c9d1d9">Line Worker</div>
+            <div style="color:#484f58;font-size:9px">Start/Stop motor · Cannot reset faults</div>
+          </div>
+          <div id="role-a-status" style="margin-left:auto;font-size:10px;color:#484f58">IDLE</div>
+        </div>
+        <div class="role-item" id="role-b" style="border-color:#21262d">
+          <span class="role-badge" style="background:#58a6ff22;color:#58a6ff">CARD B</span>
+          <div>
+            <div style="color:#c9d1d9">Maintenance Tech</div>
+            <div style="color:#484f58;font-size:9px">Clear fault · Reset relay · No threshold access</div>
+          </div>
+          <div id="role-b-status" style="margin-left:auto;font-size:10px;color:#484f58">IDLE</div>
+        </div>
+        <div class="role-item" id="role-c" style="border-color:#21262d">
+          <span class="role-badge" style="background:#bc8cff22;color:#bc8cff">CARD C</span>
+          <div>
+            <div style="color:#c9d1d9">Plant Engineer</div>
+            <div style="color:#484f58;font-size:9px">Full access · Adjust voltage thresholds</div>
+          </div>
+          <div id="role-c-status" style="margin-left:auto;font-size:10px;color:#484f58">IDLE</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:10px;padding:8px;background:#080c11;border-radius:6px;border:1px solid #21262d">
+        <div style="color:#484f58">LAST SCAN</div>
+        <div id="last-scan" style="color:#c9d1d9;margin-top:2px">None</div>
+      </div>
+    </div>
+
+    <!-- MFA Keypad -->
+    <div class="auth-box">
+      <h4 style="color:#58a6ff">🔢 MFA PIN ENTRY</h4>
+      <div id="mfa-stage" style="font-size:10px;color:#e3b341;margin-bottom:8px;min-height:16px">System nominal — no auth required</div>
+      <div id="keypad-display">——</div>
+      <div class="kpad">
+        <div class="kbtn" onclick="kpress('1')">1</div>
+        <div class="kbtn" onclick="kpress('2')">2</div>
+        <div class="kbtn" onclick="kpress('3')">3</div>
+        <div class="kbtn" onclick="kpress('A')" style="color:#bc8cff">A</div>
+        <div class="kbtn" onclick="kpress('4')">4</div>
+        <div class="kbtn" onclick="kpress('5')">5</div>
+        <div class="kbtn" onclick="kpress('6')">6</div>
+        <div class="kbtn" onclick="kpress('B')" style="color:#bc8cff">B</div>
+        <div class="kbtn" onclick="kpress('7')">7</div>
+        <div class="kbtn" onclick="kpress('8')">8</div>
+        <div class="kbtn" onclick="kpress('9')">9</div>
+        <div class="kbtn" onclick="kpress('C')" style="color:#bc8cff">C</div>
+        <div class="kbtn" onclick="kpress('*')" style="color:#f85149">CLR</div>
+        <div class="kbtn" onclick="kpress('0')">0</div>
+        <div class="kbtn" onclick="kpress('#')" style="color:#56d364">ENT</div>
+        <div class="kbtn" onclick="kpress('D')" style="color:#bc8cff">D</div>
+      </div>
+    </div>
+
+    <!-- Auth Status / Result -->
+    <div class="auth-box">
+      <h4 style="color:#56d364">✅ AUTHENTICATION STATUS</h4>
+      <div id="auth-timeline" style="display:flex;flex-direction:column;gap:8px">
+        <div class="srow" id="factor1-row">
+          <span class="srow-label">Factor 1 — RFID Badge</span>
+          <span id="factor1-val" class="srow-val" style="color:#484f58">PENDING</span>
+        </div>
+        <div class="srow" id="factor2-row">
+          <span class="srow-label">Factor 2 — PIN Code</span>
+          <span id="factor2-val" class="srow-val" style="color:#484f58">PENDING</span>
+        </div>
+        <div class="srow" style="margin-top:4px">
+          <span class="srow-label">Auth Result</span>
+          <span id="auth-result" class="srow-val" style="color:#484f58">—</span>
+        </div>
+      </div>
+      <div id="auth-msg" style="margin-top:12px;padding:10px;background:#080c11;border-radius:6px;font-size:11px;color:#484f58;min-height:60px;line-height:1.6">
+        Scan an RFID card to begin authentication flow.
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- CONTROLS -->
+<div id="controls">
+  <span>VOLTAGE:</span>
+  <input type="range" id="volt-slider" min="0" max="440" value="220" oninput="setVoltage(this.value)"/>
+  <span id="volt-disp">220V</span>
+  <button class="ctrl" onclick="simSurge()">⚡ SURGE</button>
+  <button class="ctrl" onclick="simBrownout()">📉 BROWNOUT</button>
+  <button class="ctrl" style="color:#bc8cff;border-color:#bc8cff" onclick="scanCard('A')">🪪 Card A (Worker)</button>
+  <button class="ctrl" style="color:#58a6ff;border-color:#58a6ff" onclick="scanCard('B')">🪪 Card B (Tech)</button>
+  <button class="ctrl" style="color:#bc8cff;border-color:#bc8cff" onclick="scanCard('C')">🪪 Card C (Engineer)</button>
+  <button class="ctrl primary" onclick="autoDemo()">▶ AUTO DEMO</button>
+  <button class="ctrl danger" onclick="hardReset()">⟳ RESET</button>
 </div>
 
 <script>
-const canvas = document.getElementById('wave-canvas');
-const ctx = canvas.getContext('2d');
-const history = new Array(300).fill(220);
+// ── STATE ─────────────────────────────────────────────────────
+const CORRECT_PIN = '1234'; // Maintenance tech PIN
+const ENGINEER_PIN = '9999'; // Engineer PIN
 
 let voltage = 220;
-let state = 'NORMAL'; // NORMAL, SURGE, BROWNOUT, LOCKED
+let sysState = 'NORMAL'; // NORMAL | FAULT | MFA_RFID | MFA_PIN | LOCKED
+let faultType = '';
+let rfidScanned = false;
+let currentRole = null;
+let pinBuffer = '';
 let faults = [];
-let autoDemoTimer = null;
-let animFrame;
+const history = new Array(300).fill(220);
 
-// ── GAUGE ────────────────────────────────────────────────────
-function polarToXY(cx, cy, r, angleDeg) {
-  const rad = (angleDeg - 90) * Math.PI / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+// ── GAUGE ─────────────────────────────────────────────────────
+function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};}
+function arc(cx,cy,r,s,e){const p=polar(cx,cy,r,s),q=polar(cx,cy,r,e),l=e-s>180?1:0;return`M${p.x} ${p.y}A${r} ${r}0 ${l}1${q.x}${q.y}`;}
+document.getElementById('g-bg').setAttribute('d',arc(80,80,62,135,405));
+function updateGauge(v){
+  const e=135+(Math.min(Math.max(v,0),440)/440)*270;
+  const c=v>300?'#f85149':v<140?'#e3b341':'#56d364';
+  document.getElementById('g-arc').setAttribute('d',arc(80,80,62,135,Math.max(136,e)));
+  document.getElementById('g-arc').setAttribute('stroke',c);
+  document.getElementById('gauge-v').style.color=c;
+  document.getElementById('gauge-v').textContent=Math.round(v)+'V';
 }
 
-function describeArc(cx, cy, r, startDeg, endDeg) {
-  const s = polarToXY(cx, cy, r, startDeg);
-  const e = polarToXY(cx, cy, r, endDeg);
-  const large = endDeg - startDeg > 180 ? 1 : 0;
-  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
-}
-
-const gaugeBg  = document.getElementById('gauge-bg');
-const gaugeArc = document.getElementById('gauge-arc');
-gaugeBg.setAttribute('d', describeArc(90, 90, 70, 135, 405));
-
-function updateGauge(v) {
-  const endDeg = 135 + (Math.min(Math.max(v, 0), 440) / 440) * 270;
-  gaugeArc.setAttribute('d', describeArc(90, 90, 70, 135, Math.max(136, endDeg)));
-  const c = v > 300 ? '#f85149' : v < 140 ? '#e3b341' : '#00d264';
-  gaugeArc.setAttribute('stroke', c);
-  document.getElementById('gauge-v').style.color = c;
-  document.getElementById('gauge-v').textContent = Math.round(v) + 'V';
-}
-
-// ── WAVEFORM ─────────────────────────────────────────────────
-function drawWave() {
-  const W = canvas.offsetWidth;
-  const H = canvas.offsetHeight;
-  canvas.width = W; canvas.height = H;
-
-  ctx.fillStyle = '#080c11';
-  ctx.fillRect(0, 0, W, H);
-
-  // Grid
-  ctx.strokeStyle = '#161b22';
-  ctx.lineWidth = 0.5;
-  for (let i = 1; i < 4; i++) {
-    ctx.beginPath();
-    ctx.moveTo(0, H * i/4);
-    ctx.lineTo(W, H * i/4);
-    ctx.stroke();
-  }
-
-  // Threshold lines
-  const surgeY    = H - (300/440) * H;
-  const brownoutY = H - (140/440) * H;
-  ctx.strokeStyle = '#f8514966'; ctx.lineWidth = 1;
+// ── WAVEFORM ──────────────────────────────────────────────────
+const canvas=document.getElementById('wave-canvas');
+const ctx=canvas.getContext('2d');
+function drawWave(){
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  canvas.width=W;canvas.height=H;
+  ctx.fillStyle='#080c11';ctx.fillRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='#161b22';ctx.lineWidth=0.5;
+  for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,H*i/4);ctx.lineTo(W,H*i/4);ctx.stroke();}
+  // thresholds
+  const sy=H-(300/440)*H,by=H-(140/440)*H;
   ctx.setLineDash([6,4]);
-  ctx.beginPath(); ctx.moveTo(0, surgeY);    ctx.lineTo(W, surgeY);    ctx.stroke();
-  ctx.strokeStyle = '#e3b34166';
-  ctx.beginPath(); ctx.moveTo(0, brownoutY); ctx.lineTo(W, brownoutY); ctx.stroke();
+  ctx.strokeStyle='#f8514955';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,sy);ctx.lineTo(W,sy);ctx.stroke();
+  ctx.strokeStyle='#e3b34155';
+  ctx.beginPath();ctx.moveTo(0,by);ctx.lineTo(W,by);ctx.stroke();
   ctx.setLineDash([]);
-
-  // Waveform
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  history.forEach((v, i) => {
-    const x = (i / history.length) * W;
-    const y = H - (v / 440) * H;
-    const c = v > 300 ? '#f85149' : v < 140 ? '#e3b341' : '#56d364';
-    ctx.strokeStyle = c;
-    if (i === 0) ctx.moveTo(x, y);
-    else { ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y); }
+  // waveform
+  ctx.lineWidth=2;
+  history.forEach((v,i)=>{
+    const x=(i/history.length)*W,y=H-(v/440)*H;
+    const c=v>300?'#f85149':v<140?'#e3b341':'#56d364';
+    ctx.strokeStyle=c;
+    ctx.beginPath();if(i>0){const px=((i-1)/history.length)*W,py=H-(history[i-1]/440)*H;ctx.moveTo(px,py);}
+    ctx.lineTo(x,y);ctx.stroke();
   });
 }
 
-// ── STATE MACHINE ────────────────────────────────────────────
-function setFault(type) {
-  if (state !== 'NORMAL') return;
-  state = 'LOCKED';
+// ── SYSTEM STATE MACHINE ──────────────────────────────────────
+function triggerFault(type){
+  if(sysState!=='NORMAL') return;
+  sysState='MFA_RFID';
+  faultType=type;
+  rfidScanned=false;
+  currentRole=null;
+  pinBuffer='';
 
-  const sysBox = document.getElementById('sys-status');
-  const stateVal = document.getElementById('state-val');
-  const stateDesc = document.getElementById('state-desc');
+  // Update badge
+  document.getElementById('sys-badge').className='badge badge-fault';
+  document.getElementById('sys-badge').textContent='⚠ '+type;
 
-  sysBox.style.borderColor = '#f85149';
-  sysBox.style.background = '#f8514911';
-  stateVal.style.color = '#f85149';
-  stateVal.className = 'val flashing';
-  stateVal.textContent = type === 'SURGE' ? '⚠ POWER SURGE' : '⚠ BROWNOUT';
-  stateDesc.textContent = 'Grid locked — Scan tech badge to reset';
-  stateDesc.style.color = '#f85149';
+  // Update relay/motor
+  document.getElementById('relay-val').style.color='#f85149';
+  document.getElementById('relay-val').textContent='OPEN ○';
+  document.getElementById('motor-val').style.color='#f85149';
+  document.getElementById('motor-val').textContent='STOPPED ■';
+  document.getElementById('trust-val').style.color='#f85149';
+  document.getElementById('trust-val').textContent='REVOKED';
+  document.getElementById('seg-val').style.color='#f85149';
+  document.getElementById('seg-val').textContent='ACTIVE';
 
-  // Open relay
-  document.getElementById('relay-diagram').innerHTML = `
-    <div class="wire"></div>
-    <div class="switch-open">✕</div>
-    <div class="wire" style="opacity:0.2"></div>
-    <div class="motor" style="background:#f8514922;color:#f85149">M</div>`;
-  document.getElementById('relay-label').style.color = '#f85149';
-  document.getElementById('relay-label').textContent = 'OPEN — Motor Protected';
+  // ZTA panel
+  document.getElementById('zta2-status').textContent='REQUIRED';
+  document.getElementById('zta2-status').style.color='#f85149';
+  document.getElementById('zta2-status').style.background='#f8514911';
 
-  document.getElementById('rfid-status').textContent = '🔒 Scan badge to reset';
-  document.getElementById('rfid-status').style.color = '#e3b341';
+  // MFA stage
+  document.getElementById('mfa-stage').textContent='FAULT DETECTED — Scan RFID badge (Factor 1)';
+  document.getElementById('mfa-stage').style.color='#f85149';
+  document.getElementById('factor1-val').textContent='REQUIRED';
+  document.getElementById('factor1-val').style.color='#e3b341';
+  document.getElementById('factor2-val').textContent='PENDING';
+  document.getElementById('factor2-val').style.color='#484f58';
+  document.getElementById('auth-result').textContent='—';
+  document.getElementById('auth-result').style.color='#484f58';
+  document.getElementById('auth-msg').textContent='⚠ Grid locked. Step 1: Scan your RFID badge to identify yourself.';
+  document.getElementById('auth-msg').style.color='#e3b341';
+  document.getElementById('keypad-display').textContent='——';
 
-  const ts = new Date().toLocaleTimeString();
-  faults.unshift(`${ts} — ${type}`);
-  if (faults.length > 5) faults.pop();
-  document.getElementById('fault-log').innerHTML = faults.map(f =>
-    `<div style="color:${f.includes('SURGE')?'#f85149':'#e3b341'}">${f}</div>`
-  ).join('');
+  // Log
+  const ts=new Date().toLocaleTimeString();
+  faults.unshift({time:ts,msg:type+' FAULT — Grid locked'});
+  renderLog();
 }
 
-function scanRFID() {
-  if (state !== 'LOCKED') {
-    document.getElementById('rfid-status').textContent = 'No fault — nothing to reset';
+function scanCard(card){
+  if(sysState==='NORMAL'){
+    // Normal op — show role access
+    showRoleAttempt(card,'NORMAL');
     return;
   }
-  document.getElementById('rfid-status').textContent = '✅ TECH AUTHORIZED — Resetting...';
-  document.getElementById('rfid-status').style.color = '#56d364';
-  setTimeout(() => resetAll(), 1500);
+  if(sysState!=='MFA_RFID') return;
+
+  currentRole=card;
+  const ts=new Date().toLocaleTimeString();
+  document.getElementById('last-scan').textContent=`Card ${card} — ${ts}`;
+
+  // Highlight role
+  ['a','b','c'].forEach(r=>document.getElementById('role-'+r).style.borderColor='#21262d');
+  document.getElementById('role-'+card.toLowerCase()).style.borderColor=
+    card==='A'?'#56d364':card==='B'?'#58a6ff':'#bc8cff';
+
+  if(card==='A'){
+    // Line worker — DENIED
+    document.getElementById('role-a-status').textContent='DENIED';
+    document.getElementById('role-a-status').style.color='#f85149';
+    document.getElementById('factor1-val').textContent='DENIED';
+    document.getElementById('factor1-val').style.color='#f85149';
+    document.getElementById('auth-msg').textContent='🚫 ACCESS DENIED: INSUFFICIENT PRIVILEGE\nCard A (Line Worker) cannot reset grid faults.\nA maintenance technician or engineer is required.';
+    document.getElementById('auth-msg').style.color='#f85149';
+    faults.unshift({time:ts,msg:'Card A — Access denied (insufficient privilege)'});
+    renderLog();
+  } else if(card==='B'||card==='C'){
+    // Tech or Engineer — proceed to PIN
+    sysState='MFA_PIN';
+    const roleLabel=card==='B'?'Maintenance Tech':'Plant Engineer';
+    document.getElementById('role-'+card.toLowerCase()+'-status').textContent='SCANNING';
+    document.getElementById('role-'+card.toLowerCase()+'-status').style.color='#56d364';
+    document.getElementById('factor1-val').textContent='VERIFIED ✓';
+    document.getElementById('factor1-val').style.color='#56d364';
+    document.getElementById('factor2-val').textContent='REQUIRED';
+    document.getElementById('factor2-val').style.color='#e3b341';
+    document.getElementById('mfa-stage').textContent=`Card ${card} accepted — Enter PIN (Factor 2)`;
+    document.getElementById('mfa-stage').style.color='#56d364';
+    document.getElementById('auth-msg').textContent=`✓ ${roleLabel} badge verified.\nStep 2: Enter your 4-digit PIN on the keypad, then press ENT.`;
+    document.getElementById('auth-msg').style.color='#58a6ff';
+    document.getElementById('keypad-display').textContent='_ _ _ _';
+    pinBuffer='';
+  }
 }
 
-function resetAll() {
-  state = 'NORMAL';
-  voltage = 220;
-  document.getElementById('volt-slider').value = 220;
-  document.getElementById('volt-display').textContent = '220V';
-
-  const sysBox = document.getElementById('sys-status');
-  sysBox.style.borderColor = '#56d364';
-  sysBox.style.background = '#56d36411';
-  const stateVal = document.getElementById('state-val');
-  stateVal.className = 'val';
-  stateVal.style.color = '#56d364';
-  stateVal.textContent = '● NOMINAL';
-  document.getElementById('state-desc').textContent = 'All parameters within safe range';
-  document.getElementById('state-desc').style.color = '#484f58';
-
-  document.getElementById('relay-diagram').innerHTML = `
-    <div class="wire"></div>
-    <div class="switch-closed"></div>
-    <div class="wire"></div>
-    <div class="motor" style="background:#56d36422;color:#56d364">M</div>`;
-  document.getElementById('relay-label').style.color = '#56d364';
-  document.getElementById('relay-label').textContent = 'CLOSED — Motor Running';
-  document.getElementById('rfid-status').textContent = 'System nominal';
-  document.getElementById('rfid-status').style.color = '#484f58';
+function showRoleAttempt(card, context){
+  const labels={A:'Line Worker — start/stop motor',B:'Maintenance Tech — normal ops',C:'Plant Engineer — full access'};
+  const colors={A:'#56d364',B:'#58a6ff',C:'#bc8cff'};
+  document.getElementById('last-scan').textContent=`Card ${card} — ${new Date().toLocaleTimeString()}`;
+  document.getElementById('auth-msg').textContent=`Card ${card}: ${labels[card]}\nNo fault active — normal operation permitted.`;
+  document.getElementById('auth-msg').style.color=colors[card];
 }
 
-function setVoltage(v) {
-  if (state !== 'NORMAL') return;
-  voltage = parseFloat(v);
-  document.getElementById('volt-display').textContent = Math.round(v) + 'V';
-  if (voltage > 300) setFault('SURGE');
-  else if (voltage < 140) setFault('BROWNOUT');
+function kpress(k){
+  if(sysState!=='MFA_PIN'){
+    if(k==='*') pinBuffer='';
+    return;
+  }
+  if(k==='*'){
+    pinBuffer='';
+    document.getElementById('keypad-display').textContent='_ _ _ _';
+    return;
+  }
+  if(k==='#'){
+    // Validate PIN
+    const correctPin=currentRole==='B'?CORRECT_PIN:ENGINEER_PIN;
+    if(pinBuffer===correctPin){
+      authSuccess();
+    } else {
+      authFail();
+    }
+    return;
+  }
+  if(k==='A'||k==='B'||k==='C'||k==='D') return; // ignore mode keys
+  if(pinBuffer.length<4){
+    pinBuffer+=k;
+    document.getElementById('keypad-display').textContent=('●'.repeat(pinBuffer.length)).padEnd(4,'_').split('').join(' ');
+  }
 }
 
-function simSurge()    { document.getElementById('volt-slider').value = 400; setVoltage(400); }
-function simBrownout() { document.getElementById('volt-slider').value = 80;  setVoltage(80);  }
+function authSuccess(){
+  sysState='NORMAL';
+  const ts=new Date().toLocaleTimeString();
+  document.getElementById('factor2-val').textContent='VERIFIED ✓';
+  document.getElementById('factor2-val').style.color='#56d364';
+  document.getElementById('auth-result').textContent='GRANTED ✓';
+  document.getElementById('auth-result').style.color='#56d364';
+  document.getElementById('mfa-stage').textContent='✓ MFA COMPLETE — Resetting grid...';
+  document.getElementById('mfa-stage').style.color='#56d364';
+  document.getElementById('auth-msg').textContent='✅ Both factors verified.\nGrid micro-segmentation lifted. Relay re-engaging motor power.';
+  document.getElementById('auth-msg').style.color='#56d364';
+  faults.unshift({time:ts,msg:'Auth success — Grid reset by Card '+currentRole});
+  renderLog();
+  setTimeout(()=>restoreNormal(),1500);
+}
 
-let demoStep = 0;
-function autoDemo() {
-  clearInterval(autoDemoTimer);
-  resetAll();
-  demoStep = 0;
-  const steps = [
-    () => setVoltage(220),
-    () => setVoltage(260),
-    () => setVoltage(290),
-    () => { document.getElementById('volt-slider').value=400; setVoltage(400); }, // surge
-    () => {}, () => {}, // hold in fault
-    () => scanRFID(),    // auto reset
-    () => setVoltage(180),
-    () => setVoltage(150),
-    () => { document.getElementById('volt-slider').value=80; setVoltage(80); }, // brownout
-    () => {}, () => {},
-    () => scanRFID(),
+function authFail(){
+  const ts=new Date().toLocaleTimeString();
+  document.getElementById('factor2-val').textContent='FAILED ✗';
+  document.getElementById('factor2-val').style.color='#f85149';
+  document.getElementById('auth-result').textContent='DENIED ✗';
+  document.getElementById('auth-result').style.color='#f85149';
+  document.getElementById('auth-msg').textContent='❌ Incorrect PIN.\nGrid remains locked. Try again or contact supervisor.';
+  document.getElementById('auth-msg').style.color='#f85149';
+  document.getElementById('keypad-display').textContent='ERROR';
+  pinBuffer='';
+  faults.unshift({time:ts,msg:'Auth FAILED — wrong PIN (Card '+currentRole+')'});
+  renderLog();
+  // Reset to MFA_PIN stage for retry
+  setTimeout(()=>{
+    document.getElementById('keypad-display').textContent='_ _ _ _';
+    document.getElementById('factor2-val').textContent='RETRY';
+    document.getElementById('factor2-val').style.color='#e3b341';
+  },1500);
+}
+
+function restoreNormal(){
+  faultType='';rfidScanned=false;currentRole=null;pinBuffer='';
+  document.getElementById('sys-badge').className='badge badge-live';
+  document.getElementById('sys-badge').textContent='● NOMINAL';
+  document.getElementById('relay-val').style.color='#56d364';document.getElementById('relay-val').textContent='CLOSED ●';
+  document.getElementById('motor-val').style.color='#56d364';document.getElementById('motor-val').textContent='RUNNING ▶';
+  document.getElementById('trust-val').style.color='#56d364';document.getElementById('trust-val').textContent='VERIFIED';
+  document.getElementById('seg-val').style.color='#484f58';document.getElementById('seg-val').textContent='INACTIVE';
+  document.getElementById('zta2-status').textContent='STANDBY';
+  document.getElementById('zta2-status').style.color='#58a6ff';
+  document.getElementById('zta2-status').style.background='#58a6ff11';
+  document.getElementById('mfa-stage').textContent='System nominal — no auth required';
+  document.getElementById('mfa-stage').style.color='#e3b341';
+  document.getElementById('factor1-val').textContent='PENDING';document.getElementById('factor1-val').style.color='#484f58';
+  document.getElementById('factor2-val').textContent='PENDING';document.getElementById('factor2-val').style.color='#484f58';
+  document.getElementById('auth-result').textContent='—';document.getElementById('auth-result').style.color='#484f58';
+  document.getElementById('auth-msg').textContent='Scan an RFID card to begin authentication flow.';
+  document.getElementById('auth-msg').style.color='#484f58';
+  document.getElementById('keypad-display').textContent='——';
+  ['a','b','c'].forEach(r=>{
+    document.getElementById('role-'+r).style.borderColor='#21262d';
+    document.getElementById('role-'+r+'-status').textContent='IDLE';
+    document.getElementById('role-'+r+'-status').style.color='#484f58';
+  });
+  document.getElementById('volt-slider').value=220;
+  document.getElementById('volt-disp').textContent='220V';
+  voltage=220;
+}
+
+function renderLog(){
+  if(faults.length===0){document.getElementById('fault-log').textContent='No faults recorded.';return;}
+  document.getElementById('fault-log').innerHTML=faults.slice(0,6).map(f=>`
+    <div class="log-entry">
+      <span class="log-time">${f.time}</span>
+      <span style="color:${f.msg.includes('success')?'#56d364':f.msg.includes('FAILED')||f.msg.includes('denied')?'#e3b341':'#f85149'}">${f.msg}</span>
+    </div>`).join('');
+}
+
+function setVoltage(v){
+  voltage=parseFloat(v);
+  document.getElementById('volt-disp').textContent=Math.round(v)+'V';
+  if(sysState!=='NORMAL') return;
+  if(voltage>300) triggerFault('SURGE');
+  else if(voltage<140) triggerFault('BROWNOUT');
+}
+
+function simSurge(){document.getElementById('volt-slider').value=400;setVoltage(400);}
+function simBrownout(){document.getElementById('volt-slider').value=70;setVoltage(70);}
+function hardReset(){restoreNormal();}
+
+let demoActive=false;
+function autoDemo(){
+  if(demoActive) return; demoActive=true;
+  hardReset();
+  const steps=[
+    [0,    ()=>setVoltage(220)],
+    [2000, ()=>setVoltage(260)],
+    [4000, ()=>{ document.getElementById('volt-slider').value=420; setVoltage(420); }],
+    [6000, ()=>scanCard('A')],   // denied
+    [8000, ()=>scanCard('B')],   // tech scans
+    [10000,()=>{ pinBuffer=''; ['1','2','3','4'].forEach(d=>kpress(d)); kpress('#'); }], // correct PIN
+    [13000,()=>setVoltage(220)],
+    [16000,()=>{ document.getElementById('volt-slider').value=60; setVoltage(60); }],
+    [18000,()=>scanCard('C')],   // engineer
+    [20000,()=>{ pinBuffer=''; ['9','9','9','9'].forEach(d=>kpress(d)); kpress('#'); }],
+    [23000,()=>{ demoActive=false; }],
   ];
-  autoDemoTimer = setInterval(() => {
-    if (demoStep < steps.length) { steps[demoStep](); demoStep++; }
-    else clearInterval(autoDemoTimer);
-  }, 2000);
+  steps.forEach(([t,fn])=>setTimeout(fn,t));
 }
 
-// ── ANIMATION LOOP ───────────────────────────────────────────
-function loop() {
+// ── ANIMATION LOOP ─────────────────────────────────────────────
+function loop(){
   history.shift();
-  // Add slight noise for realism
-  const noisy = voltage + (Math.random() - 0.5) * 4;
+  const noisy = sysState==='NORMAL' ? voltage+(Math.random()-0.5)*5 : voltage+(Math.random()-0.5)*3;
   history.push(noisy);
   updateGauge(noisy);
   drawWave();
-  animFrame = requestAnimationFrame(loop);
+  requestAnimationFrame(loop);
 }
-
 loop();
 </script>
 </body>
