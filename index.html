@@ -229,13 +229,14 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
   <div class="twin-card" style="min-width:200px">
     <h4>HEALTH BREAKDOWN</h4>
     <div id="health-breakdown">
-      <div class="hb-row"><span class="hb-lbl">Load (25%)</span><div class="hb-bar"><div class="hb-fill" id="hb-load" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-load-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">Load (20%)</span><div class="hb-bar"><div class="hb-fill" id="hb-load" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-load-v">100</span></div>
       <div class="hb-row"><span class="hb-lbl">J1 Temp (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-temp" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-temp-v">100</span></div>
       <div class="hb-row"><span class="hb-lbl">J2 Temp (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t2" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t2-v">100</span></div>
       <div class="hb-row"><span class="hb-lbl">J3 Temp (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t3" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t3-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J1 Vib (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-vib" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-vib-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J2 Vib (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v2" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v2-v">100</span></div>
-      <div class="hb-row"><span class="hb-lbl">J3 Vib (15%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v3" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v3-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J4 Motor (10%)</span><div class="hb-bar"><div class="hb-fill" id="hb-t4" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-t4-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J1 Vib (13%)</span><div class="hb-bar"><div class="hb-fill" id="hb-vib" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-vib-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J2 Vib (13%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v2" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v2-v">100</span></div>
+      <div class="hb-row"><span class="hb-lbl">J3 Vib (14%)</span><div class="hb-bar"><div class="hb-fill" id="hb-v3" style="width:100%;background:#56d364"></div></div><span class="hb-val" id="hb-v3-v">100</span></div>
     </div>
   </div>
 
@@ -1232,8 +1233,9 @@ function calcHealthScores(v){
   // Temperature scores — each joint
   const tempRaw = parseFloat(document.getElementById('h-temp').textContent)||22;
   const tempScore1 = tempRaw<=35?100:tempRaw<=40?Math.max(0,100-((tempRaw-35)/5)*100):0;
-  const tempScore2 = Math.min(100, tempScore1 + (Math.random()*4-2)); // J2/J3 slight variance
+  const tempScore2 = Math.min(100, tempScore1 + (Math.random()*4-2));
   const tempScore3 = Math.min(100, tempScore1 + (Math.random()*4-2));
+  const tempScore4 = Math.min(100, tempScore1 + (Math.random()*4-2)); // J4 motor housing
 
   // Piezo scores — 0 at rest, drops with vibration
   const p1s = Math.max(0, 100-(piezoSim[0]/1023)*100);
@@ -1248,15 +1250,16 @@ function calcHealthScores(v){
   vibScore   = Math.round((p1s+p2s+p3s)/3);
   driftScore = Math.round(ds);
 
-  // Weighted composite — 3 joints, 7 inputs
+  // Weighted composite — 4 temp sensors + 3 piezos + load = 8 inputs
   healthScore = Math.round(
-    ls          * 0.25 +
+    ls          * 0.20 +
     tempScore1  * 0.10 +
     tempScore2  * 0.10 +
     tempScore3  * 0.10 +
-    p1s         * 0.15 +
-    p2s         * 0.15 +
-    p3s         * 0.15
+    tempScore4  * 0.10 +
+    p1s         * 0.13 +
+    p2s         * 0.13 +
+    p3s         * 0.14
   );
 
   // Failure probability
@@ -1282,6 +1285,7 @@ function calcHealthScores(v){
   };
   setHB2('t2', Math.round(tempScore2));
   setHB2('t3', Math.round(tempScore3));
+  setHB2('t4', Math.round(tempScore4));
   setHB2('v2', Math.round(p2s));
   setHB2('v3', Math.round(p3s));
 
@@ -1291,6 +1295,7 @@ function calcHealthScores(v){
   setDT('dt-t1', tempRaw.toFixed(0)+'°C', tc);
   setDT('dt-t2', (tempRaw+0.3).toFixed(0)+'°C', tc);
   setDT('dt-t3', (tempRaw-0.2).toFixed(0)+'°C', tc);
+  setDT('dt-t4', (tempRaw+0.5).toFixed(0)+'°C', tc); // motor housing runs slightly hotter
   const pc=(x)=>x>600?'#f85149':x>300?'#e3b341':'#484f58';
   setDT('dt-p1', piezoSim[0].toFixed(0), pc(piezoSim[0]));
   setDT('dt-p2', piezoSim[1].toFixed(0), pc(piezoSim[1]));
