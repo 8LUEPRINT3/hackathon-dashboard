@@ -19,7 +19,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
 
 /* ── HERO LOAD ── */
 #hero{background:#010409;border-bottom:1px solid #21262d;padding:10px 20px;display:flex;align-items:center;gap:24px;flex-shrink:0}
-#hero-num{font-size:80px;font-weight:900;line-height:1;color:#56d364;transition:color .3s;min-width:170px;letter-spacing:-3px;font-family:'Courier New',monospace}
+#hero-num{font-size:36px;font-weight:900;line-height:1;color:#56d364;transition:color .3s;min-width:120px;letter-spacing:2px;font-family:'Segoe UI',sans-serif}
 #hero-zone{font-size:13px;font-weight:700;padding:4px 14px;border-radius:20px;background:#56d36422;border:1px solid #56d364;color:#56d364;transition:all .3s;letter-spacing:1px;margin-top:4px;display:inline-block}
 .hero-right{flex:1;display:flex;flex-direction:column;gap:8px}
 #hero-slider-lbl{font-size:12px;color:#484f58;letter-spacing:1px}
@@ -287,22 +287,53 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
 </div>
 <div id="hero">
   <div>
-    <div style="font-size:12px;color:#484f58;letter-spacing:1px;margin-bottom:2px">JOINT LOAD</div>
-    <div id="hero-num">50%</div>
-    <div id="hero-zone">● GREEN</div>
+    <div style="font-size:12px;color:#484f58;letter-spacing:1px;margin-bottom:2px">SYSTEM ZONE</div>
+    <div id="hero-num">GREEN</div>
+    <div id="hero-zone">● ALL SENSORS NOMINAL</div>
   </div>
-  <div class="hero-right">
-    <div id="hero-slider-lbl">◀ DRAG SLIDER TO SIMULATE LOAD ▶</div>
-    <input type="range" id="vslider" min="0" max="100" value="50" oninput="onSlider(this.value)"/>
-    <div class="slider-marks">
-      <span>0% STALL</span><span>25%</span><span>50% NORMAL</span><span>65% CAUTION</span><span>80% FAULT</span><span>100%</span>
+
+  <!-- 4 TEMP READINGS -->
+  <div style="display:flex;flex-direction:column;gap:6px;min-width:160px">
+    <div style="font-size:11px;color:#484f58;font-weight:600;letter-spacing:1px">TEMPERATURE</div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:#8b949e">J1 Base</span>
+      <span id="h-t1" style="font-size:15px;font-weight:700;font-family:'Courier New',monospace;color:#56d364">--°C</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:#8b949e">J2 Shoulder</span>
+      <span id="h-t2" style="font-size:15px;font-weight:700;font-family:'Courier New',monospace;color:#56d364">--°C</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:#8b949e">J3 Elbow</span>
+      <span id="h-t3" style="font-size:15px;font-weight:700;font-family:'Courier New',monospace;color:#56d364">--°C</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:#e3b341">J4 Motor</span>
+      <span id="h-temp" style="font-size:15px;font-weight:700;font-family:'Courier New',monospace;color:#56d364">--°C</span>
     </div>
   </div>
+
+  <!-- 3 PIEZO READINGS -->
+  <div style="display:flex;flex-direction:column;gap:6px;min-width:160px">
+    <div style="font-size:11px;color:#484f58;font-weight:600;letter-spacing:1px">VIBRATION</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span style="font-size:11px;color:#8b949e">J1 Base</span>
+      <div style="flex:1;height:6px;background:#21262d;border-radius:3px;overflow:hidden"><div id="pvb1" style="height:100%;width:0%;background:#56d364;border-radius:3px;transition:width .3s,background .3s"></div></div>
+      <span id="h-p1" style="font-size:12px;font-weight:700;color:#56d364;min-width:36px;text-align:right">0</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span style="font-size:11px;color:#8b949e">J2 Shoulder</span>
+      <div style="flex:1;height:6px;background:#21262d;border-radius:3px;overflow:hidden"><div id="pvb2" style="height:100%;width:0%;background:#56d364;border-radius:3px;transition:width .3s,background .3s"></div></div>
+      <span id="h-p2" style="font-size:12px;font-weight:700;color:#56d364;min-width:36px;text-align:right">0</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span style="font-size:11px;color:#8b949e">J3 Elbow</span>
+      <div style="flex:1;height:6px;background:#21262d;border-radius:3px;overflow:hidden"><div id="pvb3" style="height:100%;width:0%;background:#56d364;border-radius:3px;transition:width .3s,background .3s"></div></div>
+      <span id="h-p3" style="font-size:12px;font-weight:700;color:#56d364;min-width:36px;text-align:right">0</span>
+    </div>
+  </div>
+
   <div class="hero-stats">
-    <div class="hstat">
-      <div class="hstat-val" id="h-temp" style="color:#e3b341">--°C</div>
-      <div class="hstat-lbl">MOTOR TEMP</div>
-    </div>
     <div class="hstat">
       <div class="hstat-val" id="h-trend" style="color:#56d364">→</div>
       <div class="hstat-lbl">TREND</div>
@@ -312,6 +343,9 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
       <div class="hstat-lbl">TO FAULT</div>
     </div>
   </div>
+
+  <!-- hidden slider for sim compatibility -->
+  <input type="range" id="vslider" min="0" max="100" value="50" oninput="onSlider(this.value)" style="display:none"/>
 </div>
 
 <!-- ROI BAR -->
@@ -330,10 +364,10 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-seri
 
   <!-- GAUGE -->
   <div class="panel" id="gauge-panel">
-    <div class="ptitle"><div class="dot" style="background:#58a6ff"></div>JOINT LOAD</div>
+    <div class="ptitle"><div class="dot" style="background:#58a6ff"></div>SYSTEM HEALTH</div>
     <div id="gauge-wrap">
       <canvas id="gcanvas" width="150" height="150"></canvas>
-      <div id="gval"><div id="gnum">50%</div><div id="glbl">JOINT LOAD</div></div>
+      <div id="gval"><div id="gnum">50%</div><div id="glbl">HEALTH SCORE</div></div>
     </div>
     <div style="margin-top:8px;width:100%">
       <div class="pbar-wrap"><div id="pbar"></div></div>
