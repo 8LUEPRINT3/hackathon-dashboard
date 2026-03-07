@@ -2,590 +2,587 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Power-Shift ZTA Matrix</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>UR10e ZTA Predictive Monitor</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;min-height:100vh;display:flex;flex-direction:column}
+body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
 /* HEADER */
-#header{padding:14px 20px;border-bottom:1px solid #21262d;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-#header h1{font-size:16px;color:#f0f6fc;letter-spacing:2px}
-.subtitle{font-size:10px;color:#484f58}
-.badge{padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:1px}
-.badge-zta{background:#bc8cff22;border:1px solid #bc8cff;color:#bc8cff}
-.badge-live{background:#56d36422;border:1px solid #56d364;color:#56d364}
-.badge-fault{background:#f8514922;border:1px solid #f85149;color:#f85149;animation:flash 0.6s infinite}
+#header{background:#010409;border-bottom:1px solid #21262d;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+#header h1{font-size:14px;color:#f0f6fc;letter-spacing:2px}
+.sub{font-size:9px;color:#484f58;margin-top:2px}
+.hbadge{padding:3px 10px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:1px;margin-left:auto}
+.green-b{background:#56d36422;border:1px solid #56d364;color:#56d364}
+.amber-b{background:#e3b34122;border:1px solid #e3b341;color:#e3b341}
+.red-b  {background:#f8514922;border:1px solid #f85149;color:#f85149;animation:flash .6s infinite}
 
-/* MAIN GRID */
-#main{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto auto;gap:1px;background:#161b22}
-.panel{background:#0d1117;padding:16px}
-.panel-title{font-size:9px;color:#484f58;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.panel-title .dot{width:6px;height:6px;border-radius:50%}
-
-/* WAVEFORM — full width */
-#wave-panel{grid-column:1/-1}
-#wave-canvas{width:100%;height:120px;background:#080c11;border-radius:6px;display:block}
-.wave-info{display:flex;gap:16px;margin-top:6px;font-size:10px}
-.wi{display:flex;align-items:center;gap:5px}
-.wi .line{width:24px;height:2px;border-radius:1px}
+/* LAYOUT */
+#body{flex:1;display:grid;grid-template-columns:200px 1fr 220px;grid-template-rows:1fr 1fr;gap:1px;background:#161b22;min-height:0}
+.panel{background:#0d1117;padding:12px;overflow:hidden}
+.ptitle{font-size:9px;color:#484f58;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.ptitle .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 
 /* GAUGE */
-#gauge-panel{display:flex;flex-direction:column;align-items:center;gap:10px}
-#gauge-wrap{position:relative;width:160px;height:160px}
-#gauge-svg{width:160px;height:160px}
-#gauge-value{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-#gauge-v{font-size:28px;font-weight:700}
-#gauge-lbl{font-size:9px;color:#484f58;letter-spacing:1px}
-.zone-row{display:flex;justify-content:space-between;width:160px;font-size:9px}
+#gauge-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;grid-row:1/3}
+#gauge-wrap{position:relative;width:150px;height:150px}
+#gsv{width:150px;height:150px}
+#gval{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+#gnum{font-size:26px;font-weight:700;color:#56d364}
+#glbl{font-size:8px;color:#484f58;letter-spacing:1px}
+.zlabels{display:flex;justify-content:space-between;width:150px;font-size:8px}
 
-/* STATUS */
-#status-panel{}
-.srow{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:6px;margin-bottom:6px;border:1px solid #21262d}
-.srow-label{font-size:10px;color:#484f58}
-.srow-val{font-size:12px;font-weight:700}
+/* TREND BOX */
+.trend-box{width:100%;background:#080c11;border-radius:6px;padding:8px 10px;border:1px solid #21262d}
+.trow{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:10px}
+.tval{font-weight:700}
+.predict-bar{width:100%;height:6px;background:#21262d;border-radius:3px;margin-top:6px;overflow:hidden}
+.predict-fill{height:6px;border-radius:3px;transition:width .5s,background .5s}
 
-/* ZTA PANEL */
-#zta-panel{grid-column:2/4}
-.zta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.zta-card{background:#080c11;border:1px solid #21262d;border-radius:8px;padding:12px}
-.zta-card h4{font-size:10px;color:#bc8cff;letter-spacing:1px;margin-bottom:8px}
-.zta-card p{font-size:10px;color:#484f58;line-height:1.6}
-.zta-status{font-size:11px;font-weight:700;margin-top:8px;padding:4px 8px;border-radius:4px;text-align:center}
+/* WAVEFORM — spans 2 rows */
+#wave-panel{grid-row:1/3;display:flex;flex-direction:column}
+#wcanvas{flex:1;width:100%;background:#080c11;border-radius:6px;display:block;min-height:0}
+.wave-legend{display:flex;gap:12px;margin-top:5px;flex-wrap:wrap}
+.wl{display:flex;align-items:center;gap:4px;font-size:9px}
+.wl-line{width:20px;height:2px;border-radius:1px}
 
-/* AUTH PANEL — full width */
-#auth-panel{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.auth-box{background:#080c11;border:1px solid #21262d;border-radius:8px;padding:14px}
-.auth-box h4{font-size:10px;letter-spacing:1px;margin-bottom:10px}
+/* STATUS PANELS */
+#joint-panel{}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:#080c11;border-radius:5px;margin-bottom:4px;border:1px solid #21262d}
+.srlabel{font-size:9px;color:#484f58}
+.srval{font-size:11px;font-weight:700}
 
-/* RFID role display */
-.role-list{display:flex;flex-direction:column;gap:6px}
-.role-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;border:1px solid #21262d;font-size:10px}
-.role-badge{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700}
-
-/* KEYPAD */
-#keypad-display{background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 12px;font-size:16px;letter-spacing:4px;color:#58a6ff;text-align:center;margin-bottom:8px;min-height:36px}
-.kpad{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-.kbtn{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:8px 4px;border-radius:4px;font-size:12px;cursor:pointer;text-align:center;font-family:monospace}
-.kbtn:hover{background:#21262d;border-color:#58a6ff}
-.kbtn:active{background:#1f6feb33}
+/* ZTA AUTH PANEL */
+#auth-panel{}
+.role-row{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#080c11;border-radius:5px;margin-bottom:4px;border:1px solid #21262d}
+.rbadge{font-size:8px;padding:1px 6px;border-radius:3px;font-weight:700;flex-shrink:0}
+.rinfo{flex:1}
+.rname{font-size:10px;color:#c9d1d9}
+.rperms{font-size:8px;color:#484f58}
+.rstatus{font-size:9px;font-weight:700}
 
 /* FAULT LOG */
-.log-entry{font-size:10px;padding:4px 0;border-bottom:1px solid #161b22;display:flex;gap:8px}
-.log-time{color:#484f58;flex-shrink:0}
+#log-panel{grid-column:1/-1;background:#010409;border-top:1px solid #21262d;padding:6px 14px;display:flex;gap:16px;align-items:center;flex-shrink:0;overflow:hidden}
+#log-scroll{flex:1;display:flex;gap:10px;overflow:hidden}
+.log-item{font-size:9px;white-space:nowrap;padding:2px 8px;border-radius:4px;border:1px solid #21262d}
 
 /* CONTROLS */
-#controls{background:#010409;border-top:1px solid #21262d;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-#controls span{font-size:10px;color:#484f58}
-button.ctrl{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;font-family:monospace}
-button.ctrl:hover{background:#21262d}
-button.ctrl.danger{border-color:#f85149;color:#f85149}
-button.ctrl.primary{border-color:#1f6feb;color:#79c0ff}
-#volt-slider{flex:1;max-width:260px;accent-color:#58a6ff}
-#volt-disp{font-size:13px;color:#58a6ff;min-width:55px}
+#controls{background:#010409;border-top:1px solid #21262d;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
+#controls span{font-size:9px;color:#484f58}
+.cbtn{background:#161b22;border:1px solid #30363d;color:#c9d1d9;padding:5px 12px;border-radius:5px;font-size:10px;cursor:pointer;font-family:monospace}
+.cbtn:hover{background:#21262d}
+.cbtn.amber{border-color:#e3b341;color:#e3b341}
+.cbtn.red{border-color:#f85149;color:#f85149}
+.cbtn.green{border-color:#56d364;color:#56d364}
+.cbtn.blue{border-color:#58a6ff;color:#79c0ff}
+#vslider{flex:1;max-width:220px;accent-color:#58a6ff}
+#vdisp{font-size:12px;color:#58a6ff;min-width:40px}
 
-@keyframes flash{0%,100%{opacity:1}50%{opacity:0.3}}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #bc8cff44}50%{box-shadow:0 0 0 8px #bc8cff00}}
-.mfa-waiting{animation:pulse 1.5s infinite}
+/* PREDICT CARD */
+#predict-card{padding:8px 10px;border-radius:6px;border:1px solid #e3b34144;background:#e3b34109;margin-top:6px;display:none}
+#predict-card.show{display:block}
+#predict-title{font-size:9px;color:#e3b341;letter-spacing:1px;margin-bottom:4px}
+#predict-msg{font-size:11px;color:#f0f6fc;line-height:1.4}
+#predict-time{font-size:13px;font-weight:700;color:#e3b341;margin-top:4px}
+
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #e3b34144}50%{box-shadow:0 0 0 6px transparent}}
+.pulsing{animation:pulse 1.5s infinite}
 </style>
 </head>
 <body>
 
 <div id="header">
   <div>
-    <h1>🤖 UR10e ZTA TRUST-BROKER — JOINT INTEGRITY MONITOR</h1>
-    <div class="subtitle">UR10e COBOT  |  6-JOINT MICRO-SEGMENTATION  |  CONTINUOUS POWER VERIFICATION  |  MFA RECOVERY</div>
+    <h1>🤖 UR10e ZTA — PREDICTIVE JOINT MONITOR</h1>
+    <div class="sub">ELBOW JOINT  |  CONTINUOUS VERIFICATION  |  TREND ANALYSIS  |  MFA RECOVERY</div>
   </div>
-  <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-    <span class="badge badge-zta">ZTA ENABLED</span>
-    <span class="badge badge-live" id="sys-badge">● NOMINAL</span>
-  </div>
+  <span class="hbadge green-b" id="hbadge">● NOMINAL</span>
 </div>
 
-<div id="main">
+<div id="body">
 
-  <!-- ROW 1: WAVEFORM -->
-  <div class="panel" id="wave-panel">
-    <div class="panel-title"><div class="dot" style="background:#58a6ff"></div>ELBOW JOINT LOAD — CONTINUOUS POLLING (ZTA: never trust, always verify)</div>
-    <canvas id="wave-canvas"></canvas>
-    <div class="wave-info">
-      <div class="wi"><div class="line" style="background:#f85149"></div><span>OVERLOAD &gt;75%</span></div>
-      <div class="wi"><div class="line" style="background:#56d364"></div><span>NOMINAL 25–75%</span></div>
-      <div class="wi"><div class="line" style="background:#e3b341"></div><span>STALL &lt;25%</span></div>
-      <div class="wi" style="margin-left:auto"><span style="color:#484f58">ZTA Principle: </span><span style="color:#bc8cff">Micro-segment failing joints · Keep rest of arm online</span></div>
-    </div>
-  </div>
-
-  <!-- ROW 2 COL 1: GAUGE -->
+  <!-- COL 1: GAUGE -->
   <div class="panel" id="gauge-panel">
-    <div class="panel-title" style="width:100%"><div class="dot" style="background:#56d364"></div>JOINT LOAD</div>
+    <div class="ptitle" style="width:100%"><div class="dot" style="background:#58a6ff"></div>JOINT LOAD</div>
+
     <div id="gauge-wrap">
-      <svg id="gauge-svg" viewBox="0 0 160 160">
-        <path id="g-bg"  d="" fill="none" stroke="#21262d" stroke-width="12" stroke-linecap="round"/>
-        <path id="g-arc" d="" fill="none" stroke="#56d364" stroke-width="10" stroke-linecap="round"/>
+      <svg id="gsv" viewBox="0 0 150 150">
+        <path id="gbg"  d="" fill="none" stroke="#21262d" stroke-width="11" stroke-linecap="round"/>
+        <!-- Zone arcs -->
+        <path id="garc-red1"   d="" fill="none" stroke="#f8514944" stroke-width="11" stroke-linecap="round"/>
+        <path id="garc-amber1" d="" fill="none" stroke="#e3b34144" stroke-width="11" stroke-linecap="round"/>
+        <path id="garc-green"  d="" fill="none" stroke="#56d36444" stroke-width="11" stroke-linecap="round"/>
+        <path id="garc-amber2" d="" fill="none" stroke="#e3b34144" stroke-width="11" stroke-linecap="round"/>
+        <path id="garc-red2"   d="" fill="none" stroke="#f8514944" stroke-width="11" stroke-linecap="round"/>
+        <!-- Value arc on top -->
+        <path id="garc-val"    d="" fill="none" stroke="#56d364"   stroke-width="9"  stroke-linecap="round"/>
       </svg>
-      <div id="gauge-value">
-        <div id="gauge-v" style="color:#56d364">50%</div>
-        <div id="gauge-lbl">JOINT LOAD</div>
+      <div id="gval">
+        <div id="gnum">50%</div>
+        <div id="glbl">JOINT LOAD</div>
       </div>
     </div>
-    <div class="zone-row">
-      <span style="color:#e3b341">STALL</span>
-      <span style="color:#56d364">SAFE</span>
-      <span style="color:#f85149">OVERLOAD</span>
-    </div>
-    <!-- Relay status -->
-    <div style="width:100%;margin-top:10px">
-      <div class="srow">
-        <span class="srow-label">RELAY</span>
-        <span class="srow-val" id="relay-val" style="color:#56d364">CLOSED ●</span>
-      </div>
-      <div class="srow">
-        <span class="srow-label">MOTOR</span>
-        <span class="srow-val" id="motor-val" style="color:#56d364">RUNNING ▶</span>
-      </div>
-      <div class="srow">
-        <span class="srow-label">TRUST STATE</span>
-        <span class="srow-val" id="trust-val" style="color:#56d364">VERIFIED</span>
-      </div>
-      <div class="srow">
-        <span class="srow-label">MICRO-SEG</span>
-        <span class="srow-val" id="seg-val" style="color:#484f58">INACTIVE</span>
-      </div>
-    </div>
-  </div>
 
-  <!-- ROW 2 COL 2+3: ZTA PRINCIPLES -->
-  <div class="panel" id="zta-panel">
-    <div class="panel-title"><div class="dot" style="background:#bc8cff"></div>ZERO TRUST ARCHITECTURE — ACTIVE ENFORCEMENT POINTS</div>
-    <div class="zta-grid">
-
-      <div class="zta-card">
-        <h4>① LEAST PRIVILEGE ACCESS</h4>
-        <p>Three RFID tiers. Each role has minimum permissions only. No implicit trust from prior access.</p>
-        <div class="zta-status" id="zta1-status" style="background:#56d36411;color:#56d364;border:1px solid #56d36444">ENFORCING</div>
-      </div>
-
-      <div class="zta-card">
-        <h4>② MULTI-FACTOR AUTH</h4>
-        <p>Badge alone is not enough. RFID (what you have) + 4-digit PIN (what you know) required to reset grid.</p>
-        <div class="zta-status" id="zta2-status" style="background:#58a6ff11;color:#58a6ff;border:1px solid #58a6ff44">STANDBY</div>
-      </div>
-
-      <div class="zta-card">
-        <h4>③ CONTINUOUS VERIFICATION</h4>
-        <p>Hardware polled every millisecond. Trust instantly revoked on anomaly. No grace period.</p>
-        <div class="zta-status" id="zta3-status" style="background:#56d36411;color:#56d364;border:1px solid #56d36444">ACTIVE</div>
-      </div>
-
+    <div class="zlabels">
+      <span style="color:#f85149">STALL</span>
+      <span style="color:#56d364">OK</span>
+      <span style="color:#f85149">OVER</span>
     </div>
 
-    <!-- Fault log -->
-    <div style="margin-top:12px">
-      <div class="panel-title"><div class="dot" style="background:#f85149"></div>FAULT LOG</div>
-      <div id="fault-log" style="font-size:10px;color:#484f58">No faults recorded.</div>
+    <!-- Trend box -->
+    <div class="trend-box" style="margin-top:8px">
+      <div class="trow">
+        <span style="color:#484f58">TREND</span>
+        <span class="tval" id="trend-val" style="color:#56d364">→ STABLE</span>
+      </div>
+      <div class="trow">
+        <span style="color:#484f58">RATE</span>
+        <span class="tval" id="trend-rate" style="color:#484f58">+0%/min</span>
+      </div>
+      <div class="predict-bar">
+        <div class="predict-fill" id="pbar" style="width:50%;background:#56d364"></div>
+      </div>
+    </div>
+
+    <!-- Prediction card -->
+    <div id="predict-card">
+      <div id="predict-title">⚠ PREDICTIVE ALERT</div>
+      <div id="predict-msg">Load trending toward overload threshold</div>
+      <div id="predict-time">~-- min to fault</div>
     </div>
   </div>
 
-  <!-- ROW 3: AUTH PANEL -->
-  <div class="panel" id="auth-panel" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-
-    <!-- RFID Role System -->
-    <div class="auth-box">
-      <h4 style="color:#bc8cff">🪪 RFID ROLE-BASED ACCESS</h4>
-      <div class="role-list">
-        <div class="role-item" id="role-a" style="border-color:#21262d">
-          <span class="role-badge" style="background:#56d36422;color:#56d364">CARD A</span>
-          <div>
-            <div style="color:#c9d1d9">Line Worker</div>
-            <div style="color:#484f58;font-size:9px">Start/Stop motor · Cannot reset faults</div>
-          </div>
-          <div id="role-a-status" style="margin-left:auto;font-size:10px;color:#484f58">IDLE</div>
-        </div>
-        <div class="role-item" id="role-b" style="border-color:#21262d">
-          <span class="role-badge" style="background:#58a6ff22;color:#58a6ff">CARD B</span>
-          <div>
-            <div style="color:#c9d1d9">Maintenance Tech</div>
-            <div style="color:#484f58;font-size:9px">Clear fault · Reset relay · No threshold access</div>
-          </div>
-          <div id="role-b-status" style="margin-left:auto;font-size:10px;color:#484f58">IDLE</div>
-        </div>
-        <div class="role-item" id="role-c" style="border-color:#21262d">
-          <span class="role-badge" style="background:#bc8cff22;color:#bc8cff">CARD C</span>
-          <div>
-            <div style="color:#c9d1d9">Plant Engineer</div>
-            <div style="color:#484f58;font-size:9px">Full access · Adjust voltage thresholds</div>
-          </div>
-          <div id="role-c-status" style="margin-left:auto;font-size:10px;color:#484f58">IDLE</div>
-        </div>
-      </div>
-      <div style="margin-top:10px;font-size:10px;padding:8px;background:#080c11;border-radius:6px;border:1px solid #21262d">
-        <div style="color:#484f58">LAST SCAN</div>
-        <div id="last-scan" style="color:#c9d1d9;margin-top:2px">None</div>
-      </div>
+  <!-- COL 2: WAVEFORM -->
+  <div class="panel" id="wave-panel">
+    <div class="ptitle"><div class="dot" style="background:#58a6ff"></div>LOAD HISTORY — ELBOW JOINT (REAL-TIME)</div>
+    <canvas id="wcanvas"></canvas>
+    <div class="wave-legend">
+      <div class="wl"><div class="wl-line" style="background:#f85149"></div><span>OVERLOAD &gt;80%</span></div>
+      <div class="wl"><div class="wl-line" style="background:#e3b341"></div><span>CAUTION 65-80%</span></div>
+      <div class="wl"><div class="wl-line" style="background:#56d364"></div><span>NOMINAL 40-65%</span></div>
+      <div class="wl"><div class="wl-line" style="background:#e3b341;opacity:.6"></div><span>CAUTION 25-40%</span></div>
+      <div class="wl"><div class="wl-line" style="background:#f85149;opacity:.6"></div><span>STALL &lt;25%</span></div>
+      <div class="wl" style="margin-left:auto"><span style="color:#bc8cff">ZTA: Never trust — always verify</span></div>
     </div>
-
-    <!-- MFA Keypad -->
-    <div class="auth-box">
-      <h4 style="color:#58a6ff">🔢 MFA PIN ENTRY</h4>
-      <div id="mfa-stage" style="font-size:10px;color:#e3b341;margin-bottom:8px;min-height:16px">System nominal — no auth required</div>
-      <div id="keypad-display">——</div>
-      <div class="kpad">
-        <div class="kbtn" onclick="kpress('1')">1</div>
-        <div class="kbtn" onclick="kpress('2')">2</div>
-        <div class="kbtn" onclick="kpress('3')">3</div>
-        <div class="kbtn" onclick="kpress('A')" style="color:#bc8cff">A</div>
-        <div class="kbtn" onclick="kpress('4')">4</div>
-        <div class="kbtn" onclick="kpress('5')">5</div>
-        <div class="kbtn" onclick="kpress('6')">6</div>
-        <div class="kbtn" onclick="kpress('B')" style="color:#bc8cff">B</div>
-        <div class="kbtn" onclick="kpress('7')">7</div>
-        <div class="kbtn" onclick="kpress('8')">8</div>
-        <div class="kbtn" onclick="kpress('9')">9</div>
-        <div class="kbtn" onclick="kpress('C')" style="color:#bc8cff">C</div>
-        <div class="kbtn" onclick="kpress('*')" style="color:#f85149">CLR</div>
-        <div class="kbtn" onclick="kpress('0')">0</div>
-        <div class="kbtn" onclick="kpress('#')" style="color:#56d364">ENT</div>
-        <div class="kbtn" onclick="kpress('D')" style="color:#bc8cff">D</div>
-      </div>
-    </div>
-
-    <!-- Auth Status / Result -->
-    <div class="auth-box">
-      <h4 style="color:#56d364">✅ AUTHENTICATION STATUS</h4>
-      <div id="auth-timeline" style="display:flex;flex-direction:column;gap:8px">
-        <div class="srow" id="factor1-row">
-          <span class="srow-label">Factor 1 — RFID Badge</span>
-          <span id="factor1-val" class="srow-val" style="color:#484f58">PENDING</span>
-        </div>
-        <div class="srow" id="factor2-row">
-          <span class="srow-label">Factor 2 — PIN Code</span>
-          <span id="factor2-val" class="srow-val" style="color:#484f58">PENDING</span>
-        </div>
-        <div class="srow" style="margin-top:4px">
-          <span class="srow-label">Auth Result</span>
-          <span id="auth-result" class="srow-val" style="color:#484f58">—</span>
-        </div>
-      </div>
-      <div id="auth-msg" style="margin-top:12px;padding:10px;background:#080c11;border-radius:6px;font-size:11px;color:#484f58;min-height:60px;line-height:1.6">
-        Scan an RFID card to begin authentication flow.
-      </div>
-    </div>
-
   </div>
 
+  <!-- COL 3 ROW 1: JOINT STATUS -->
+  <div class="panel" id="joint-panel">
+    <div class="ptitle"><div class="dot" id="status-dot" style="background:#56d364"></div>JOINT STATUS</div>
+
+    <div class="srow">
+      <span class="srlabel">ZONE</span>
+      <span class="srval" id="sv-zone" style="color:#56d364">● GREEN</span>
+    </div>
+    <div class="srow">
+      <span class="srlabel">RELAY</span>
+      <span class="srval" id="sv-relay" style="color:#56d364">CLOSED</span>
+    </div>
+    <div class="srow">
+      <span class="srlabel">MOTOR</span>
+      <span class="srval" id="sv-motor" style="color:#56d364">RUNNING ▶</span>
+    </div>
+    <div class="srow">
+      <span class="srlabel">MICRO-SEG</span>
+      <span class="srval" id="sv-seg" style="color:#484f58">INACTIVE</span>
+    </div>
+    <div class="srow">
+      <span class="srlabel">TRUST</span>
+      <span class="srval" id="sv-trust" style="color:#56d364">VERIFIED</span>
+    </div>
+    <div class="srow">
+      <span class="srlabel">LOAD</span>
+      <span class="srval" id="sv-load" style="color:#56d364">50%</span>
+    </div>
+  </div>
+
+  <!-- COL 3 ROW 2: ZTA AUTH -->
+  <div class="panel" id="auth-panel">
+    <div class="ptitle"><div class="dot" style="background:#bc8cff"></div>ZTA ACCESS CONTROL</div>
+
+    <div class="role-row" id="role-a">
+      <span class="rbadge" style="background:#56d36422;color:#56d364">A</span>
+      <div class="rinfo">
+        <div class="rname">Floor Worker</div>
+        <div class="rperms">Monitor only · No reset</div>
+      </div>
+      <span class="rstatus" id="ra-status" style="color:#484f58">IDLE</span>
+    </div>
+    <div class="role-row" id="role-b">
+      <span class="rbadge" style="background:#58a6ff22;color:#58a6ff">B</span>
+      <div class="rinfo">
+        <div class="rname">Maint. Tech</div>
+        <div class="rperms">Fault reset · PIN: 1234</div>
+      </div>
+      <span class="rstatus" id="rb-status" style="color:#484f58">IDLE</span>
+    </div>
+    <div class="role-row" id="role-c">
+      <span class="rbadge" style="background:#bc8cff22;color:#bc8cff">C</span>
+      <div class="rinfo">
+        <div class="rname">Engineer</div>
+        <div class="rperms">Full access · PIN: 9999</div>
+      </div>
+      <span class="rstatus" id="rc-status" style="color:#484f58">IDLE</span>
+    </div>
+
+    <!-- MFA status -->
+    <div style="margin-top:6px;padding:8px;background:#080c11;border-radius:6px;border:1px solid #21262d">
+      <div style="font-size:9px;color:#484f58;margin-bottom:4px">MFA STATUS</div>
+      <div id="mfa-msg" style="font-size:10px;color:#484f58;line-height:1.5">System nominal — no auth required</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FAULT LOG BAR -->
+<div id="log-panel">
+  <span style="font-size:9px;color:#484f58;flex-shrink:0">FAULT LOG</span>
+  <div id="log-scroll">
+    <span class="log-item" style="color:#484f58">No faults recorded</span>
+  </div>
 </div>
 
 <!-- CONTROLS -->
 <div id="controls">
-  <span>VOLTAGE:</span>
-  <input type="range" id="volt-slider" min="0" max="440" value="220" oninput="setVoltage(this.value)"/>
-  <span id="volt-disp">50%</span>
-  <button class="ctrl" onclick="simSurge()">⚡ OVERLOAD</button>
-  <button class="ctrl" onclick="simBrownout()">📉 STALL</button>
-  <button class="ctrl" style="color:#bc8cff;border-color:#bc8cff" onclick="scanCard('A')">🪪 Card A (Worker)</button>
-  <button class="ctrl" style="color:#58a6ff;border-color:#58a6ff" onclick="scanCard('B')">🪪 Card B (Tech)</button>
-  <button class="ctrl" style="color:#bc8cff;border-color:#bc8cff" onclick="scanCard('C')">🪪 Card C (Engineer)</button>
-  <button class="ctrl primary" onclick="autoDemo()">▶ AUTO DEMO</button>
-  <button class="ctrl danger" onclick="hardReset()">⟳ RESET</button>
+  <span>LOAD:</span>
+  <input type="range" id="vslider" min="0" max="100" value="50" oninput="setLoad(this.value)"/>
+  <span id="vdisp">50%</span>
+  <button class="cbtn amber" onclick="simAmber()">⚠ CAUTION</button>
+  <button class="cbtn red"   onclick="simOverload()">🔴 OVERLOAD</button>
+  <button class="cbtn red"   onclick="simStall()">📉 STALL</button>
+  <button class="cbtn"       onclick="scanCard('A')">🪪 Card A</button>
+  <button class="cbtn blue"  onclick="scanCard('B')">🪪 Card B</button>
+  <button class="cbtn"       onclick="scanCard('C')" style="border-color:#bc8cff;color:#bc8cff">🪪 Card C</button>
+  <button class="cbtn blue"  onclick="autoDemo()">▶ AUTO DEMO</button>
+  <button class="cbtn red"   onclick="hardReset()">⟳ RESET</button>
 </div>
 
 <script>
-// ── STATE ─────────────────────────────────────────────────────
-const CORRECT_PIN = '1234'; // Maintenance tech PIN
-const ENGINEER_PIN = '9999'; // Engineer PIN
-
-let voltage = 220;
-let sysState = 'NOMINAL'; // NOMINAL | FAULT | MFA_RFID | MFA_PIN | LOCKED
-let faultType = '';
-let rfidScanned = false;
-let currentRole = null;
-let pinBuffer = '';
+// ── STATE ────────────────────────────────────────────────────
+let load = 50;           // 0–100 %
+let zone = 'GREEN';      // GREEN AMBER_LOW AMBER_HIGH RED
+let jointDown = false;
+let trend = 0;
+let minsToFault = -1;
+const history = new Array(300).fill(50);
+const HISTORY = 60;
+const loadSamples = new Array(HISTORY).fill(50);
+let sampleIdx = 0;
 let faults = [];
-const history = new Array(300).fill(220);
+let authState = 'IDLE';  // IDLE AWAIT_RFID AWAIT_PIN
+let currentCard = null;
+let pin = '';
 
-// ── GAUGE ─────────────────────────────────────────────────────
+// ── GAUGE ARCS ───────────────────────────────────────────────
 function polar(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};}
-function arc(cx,cy,r,s,e){const p=polar(cx,cy,r,s),q=polar(cx,cy,r,e),l=e-s>180?1:0;return`M${p.x} ${p.y}A${r} ${r}0 ${l}1${q.x}${q.y}`;}
-document.getElementById('g-bg').setAttribute('d',arc(80,80,62,135,405));
-function updateGauge(v){
-  const e=135+(Math.min(Math.max(v,0),440)/440)*270;
-  const c=v>300?'#f85149':v<140?'#e3b341':'#56d364';
-  document.getElementById('g-arc').setAttribute('d',arc(80,80,62,135,Math.max(136,e)));
-  document.getElementById('g-arc').setAttribute('stroke',c);
-  document.getElementById('gauge-v').style.color=c;
-  document.getElementById('gauge-v').textContent=Math.round(v)+'V';
+function arc(cx,cy,r,s,e){
+  if(e<=s) return '';
+  const p=polar(cx,cy,r,s),q=polar(cx,cy,r,e),l=(e-s)>180?1:0;
+  return `M${p.x} ${p.y}A${r} ${r}0 ${l}1${q.x}${q.y}`;
+}
+const R=58, CX=75, CY=75, START=135, TOTAL=270;
+function pctToDeg(p){return START+(p/100)*TOTAL;}
+
+// Draw zone bands (static)
+document.getElementById('gbg').setAttribute('d', arc(CX,CY,R,START,START+TOTAL));
+document.getElementById('garc-red1').setAttribute('d',   arc(CX,CY,R,START,         pctToDeg(25)));
+document.getElementById('garc-amber1').setAttribute('d', arc(CX,CY,R,pctToDeg(25),  pctToDeg(40)));
+document.getElementById('garc-green').setAttribute('d',  arc(CX,CY,R,pctToDeg(40),  pctToDeg(65)));
+document.getElementById('garc-amber2').setAttribute('d', arc(CX,CY,R,pctToDeg(65),  pctToDeg(80)));
+document.getElementById('garc-red2').setAttribute('d',   arc(CX,CY,R,pctToDeg(80),  START+TOTAL));
+
+function updateGauge(v) {
+  const endDeg = pctToDeg(Math.min(Math.max(v,0),100));
+  document.getElementById('garc-val').setAttribute('d', arc(CX,CY,R,START,Math.max(START+1,endDeg)));
+  const c = v>=80||v<=25?'#f85149':v>=65||v<=40?'#e3b341':'#56d364';
+  document.getElementById('garc-val').setAttribute('stroke',c);
+  document.getElementById('gnum').style.color=c;
+  document.getElementById('gnum').textContent=Math.round(v)+'%';
 }
 
-// ── WAVEFORM ──────────────────────────────────────────────────
-const canvas=document.getElementById('wave-canvas');
-const ctx=canvas.getContext('2d');
+// ── WAVEFORM ─────────────────────────────────────────────────
+const canvas = document.getElementById('wcanvas');
+const ctx = canvas.getContext('2d');
+
 function drawWave(){
-  const W=canvas.offsetWidth,H=canvas.offsetHeight;
-  canvas.width=W;canvas.height=H;
-  ctx.fillStyle='#080c11';ctx.fillRect(0,0,W,H);
-  // grid
-  ctx.strokeStyle='#161b22';ctx.lineWidth=0.5;
-  for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,H*i/4);ctx.lineTo(W,H*i/4);ctx.stroke();}
-  // thresholds
-  const sy=H-(300/440)*H,by=H-(140/440)*H;
-  ctx.setLineDash([6,4]);
-  ctx.strokeStyle='#f8514955';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(0,sy);ctx.lineTo(W,sy);ctx.stroke();
-  ctx.strokeStyle='#e3b34155';
-  ctx.beginPath();ctx.moveTo(0,by);ctx.lineTo(W,by);ctx.stroke();
+  const W=canvas.offsetWidth, H=canvas.offsetHeight;
+  canvas.width=W; canvas.height=H;
+  ctx.fillStyle='#080c11'; ctx.fillRect(0,0,W,H);
+
+  // Zone bands background
+  const zones=[
+    [0,25,'#f8514908'],[25,40,'#e3b34108'],[40,65,'#56d36408'],
+    [65,80,'#e3b34108'],[80,100,'#f8514908']
+  ];
+  zones.forEach(([lo,hi,col])=>{
+    const y1=H-(hi/100)*H, y2=H-(lo/100)*H;
+    ctx.fillStyle=col; ctx.fillRect(0,y1,W,y2-y1);
+  });
+
+  // Threshold lines
+  [[25,'#f8514966'],[40,'#e3b34166'],[65,'#e3b34166'],[80,'#f8514966']].forEach(([pct,col])=>{
+    const y=H-(pct/100)*H;
+    ctx.strokeStyle=col; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  });
   ctx.setLineDash([]);
-  // waveform
+
+  // Grid
+  ctx.strokeStyle='#161b22'; ctx.lineWidth=0.4;
+  for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,H*i/4);ctx.lineTo(W,H*i/4);ctx.stroke();}
+
+  // Waveform — colour per zone
   ctx.lineWidth=2;
   history.forEach((v,i)=>{
-    const x=(i/history.length)*W,y=H-(v/440)*H;
-    const c=v>300?'#f85149':v<140?'#e3b341':'#56d364';
-    ctx.strokeStyle=c;
-    ctx.beginPath();if(i>0){const px=((i-1)/history.length)*W,py=H-(history[i-1]/440)*H;ctx.moveTo(px,py);}
-    ctx.lineTo(x,y);ctx.stroke();
+    if(i===0) return;
+    const x=(i/history.length)*W, px=((i-1)/history.length)*W;
+    const y=H-(v/100)*H, py=H-(history[i-1]/100)*H;
+    const c=v>=80||v<=25?'#f85149':v>=65||v<=40?'#e3b341':'#56d364';
+    ctx.strokeStyle=c; ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(x,y); ctx.stroke();
   });
+
+  // Trend line (last 30 samples projected forward)
+  if(trend > 2) {
+    const lastX=W, lastY=H-(load/100)*H;
+    const projPct=Math.min(100,load+trend*15);
+    const projY=H-(projPct/100)*H;
+    ctx.strokeStyle='#e3b34188'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(lastX+60,projY); ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
 
-// ── SYSTEM STATE MACHINE ──────────────────────────────────────
+// ── TREND CALC ───────────────────────────────────────────────
+function calcTrend(){
+  const recent=loadSamples.slice(-5).reduce((a,b)=>a+b,0)/5;
+  const older=loadSamples.slice(0,5).reduce((a,b)=>a+b,0)/5;
+  return recent-older;
+}
+
+function estimateMins(t,v){
+  if(t<=0.5) return -1;
+  const distToFault=80-v;
+  if(distToFault<=0) return 0;
+  const samplesPerMin=200;
+  return Math.max(1,Math.round((distToFault/t)*0.3));
+}
+
+// ── ZONE LOGIC ───────────────────────────────────────────────
+function getZone(v){
+  if(v>=80||v<=25) return 'RED';
+  if(v>=65||v<=40) return 'AMBER';
+  return 'GREEN';
+}
+
+function applyZone(v){
+  const newZone=getZone(v);
+  if(newZone==='RED' && !jointDown){ triggerFault(v>=80?'OVERLOAD':'STALL'); return; }
+  zone=newZone;
+  updateStatusPanel(v,newZone);
+  updatePrediction();
+}
+
+function updateStatusPanel(v,z){
+  const c=z==='RED'?'#f85149':z==='AMBER'?'#e3b341':'#56d364';
+  document.getElementById('status-dot').style.background=c;
+
+  const badge=document.getElementById('hbadge');
+  if(z==='GREEN'){badge.className='hbadge green-b';badge.textContent='● NOMINAL';}
+  else if(z==='AMBER'){badge.className='hbadge amber-b';badge.textContent='⚠ CAUTION';}
+
+  document.getElementById('sv-zone').style.color=c;
+  document.getElementById('sv-zone').textContent=z==='GREEN'?'● GREEN':z==='AMBER'?'▲ AMBER':'● RED';
+  document.getElementById('sv-load').style.color=c;
+  document.getElementById('sv-load').textContent=Math.round(v)+'%';
+
+  // Trend display
+  const tStr=trend>8?'▲▲ RISING FAST':trend>3?'▲ RISING':trend<-8?'▼▼ FALLING':trend<-3?'▼ FALLING':'→ STABLE';
+  const tCol=trend>8?'#f85149':trend>3?'#e3b341':trend<-3?'#58a6ff':'#56d364';
+  document.getElementById('trend-val').textContent=tStr;
+  document.getElementById('trend-val').style.color=tCol;
+  document.getElementById('trend-rate').textContent=(trend>0?'+':'')+trend.toFixed(1)+'%/cycle';
+  document.getElementById('trend-rate').style.color=tCol;
+
+  // Progress bar
+  const pbar=document.getElementById('pbar');
+  pbar.style.width=Math.round(v)+'%';
+  pbar.style.background=c;
+}
+
+function updatePrediction(){
+  trend=calcTrend();
+  minsToFault=estimateMins(trend,load);
+  const card=document.getElementById('predict-card');
+  if(trend>3 && load>50 && !jointDown){
+    card.classList.add('show');
+    card.classList.add('pulsing');
+    document.getElementById('predict-msg').textContent=
+      `Load trending ▲ at +${trend.toFixed(1)}% per cycle. Schedule maintenance now.`;
+    document.getElementById('predict-time').textContent=
+      minsToFault>0?`~${minsToFault} min to fault`:'Fault imminent';
+  } else {
+    card.classList.remove('show','pulsing');
+  }
+}
+
+// ── FAULT / RESET ────────────────────────────────────────────
 function triggerFault(type){
-  if(sysState!=='NOMINAL') return;
-  sysState='MFA_RFID';
-  faultType=type;
-  rfidScanned=false;
-  currentRole=null;
-  pinBuffer='';
-
-  // Update badge
-  document.getElementById('sys-badge').className='badge badge-fault';
-  document.getElementById('sys-badge').textContent='⚠ '+type;
-
-  // Update relay/motor
-  document.getElementById('relay-val').style.color='#f85149';
-  document.getElementById('relay-val').textContent='OPEN ○';
-  document.getElementById('motor-val').style.color='#f85149';
-  document.getElementById('motor-val').textContent='STOPPED ■';
-  document.getElementById('trust-val').style.color='#f85149';
-  document.getElementById('trust-val').textContent='REVOKED';
-  document.getElementById('seg-val').style.color='#f85149';
-  document.getElementById('seg-val').textContent='ACTIVE';
-
-  // ZTA panel
-  document.getElementById('zta2-status').textContent='REQUIRED';
-  document.getElementById('zta2-status').style.color='#f85149';
-  document.getElementById('zta2-status').style.background='#f8514911';
-
-  // MFA stage
-  document.getElementById('mfa-stage').textContent='FAULT DETECTED — Scan RFID badge (Factor 1)';
-  document.getElementById('mfa-stage').style.color='#f85149';
-  document.getElementById('factor1-val').textContent='REQUIRED';
-  document.getElementById('factor1-val').style.color='#e3b341';
-  document.getElementById('factor2-val').textContent='PENDING';
-  document.getElementById('factor2-val').style.color='#484f58';
-  document.getElementById('auth-result').textContent='—';
-  document.getElementById('auth-result').style.color='#484f58';
-  document.getElementById('auth-msg').textContent='⚠ Grid locked. Step 1: Scan your RFID badge to identify yourself.';
-  document.getElementById('auth-msg').style.color='#e3b341';
-  document.getElementById('keypad-display').textContent='——';
-
-  // Log
+  zone='RED'; jointDown=true;
   const ts=new Date().toLocaleTimeString();
-  faults.unshift({time:ts,msg:type+' FAULT — Grid locked'});
+  faults.unshift(ts+' — '+type+' FAULT');
   renderLog();
+
+  document.getElementById('hbadge').className='hbadge red-b';
+  document.getElementById('hbadge').textContent='⚠ FAULT';
+  document.getElementById('sv-zone').textContent='● RED — FAULT';
+  document.getElementById('sv-zone').style.color='#f85149';
+  document.getElementById('sv-relay').textContent='OPEN ○';
+  document.getElementById('sv-relay').style.color='#f85149';
+  document.getElementById('sv-motor').textContent='STOPPED ■';
+  document.getElementById('sv-motor').style.color='#f85149';
+  document.getElementById('sv-seg').textContent='ACTIVE';
+  document.getElementById('sv-seg').style.color='#f85149';
+  document.getElementById('sv-trust').textContent='REVOKED';
+  document.getElementById('sv-trust').style.color='#f85149';
+
+  authState='AWAIT_RFID';
+  document.getElementById('mfa-msg').textContent='⚠ Grid locked. Scan RFID badge to begin MFA.';
+  document.getElementById('mfa-msg').style.color='#f85149';
 }
 
-function scanCard(card){
-  if(sysState==='NOMINAL'){
-    // Normal op — show role access
-    showRoleAttempt(card,'NOMINAL');
-    return;
-  }
-  if(sysState!=='MFA_RFID') return;
-
-  currentRole=card;
+function restoreJoint(){
+  jointDown=false; zone='GREEN'; authState='IDLE';
+  currentCard=null; pin='';
   const ts=new Date().toLocaleTimeString();
-  document.getElementById('last-scan').textContent=`Card ${card} — ${ts}`;
-
-  // Highlight role
-  ['a','b','c'].forEach(r=>document.getElementById('role-'+r).style.borderColor='#21262d');
-  document.getElementById('role-'+card.toLowerCase()).style.borderColor=
-    card==='A'?'#56d364':card==='B'?'#58a6ff':'#bc8cff';
-
-  if(card==='A'){
-    // Line worker — DENIED
-    document.getElementById('role-a-status').textContent='DENIED';
-    document.getElementById('role-a-status').style.color='#f85149';
-    document.getElementById('factor1-val').textContent='DENIED';
-    document.getElementById('factor1-val').style.color='#f85149';
-    document.getElementById('auth-msg').textContent='🚫 ACCESS DENIED: INSUFFICIENT PRIVILEGE\nCard A (Line Worker) cannot reset grid faults.\nA maintenance technician or engineer is required.';
-    document.getElementById('auth-msg').style.color='#f85149';
-    faults.unshift({time:ts,msg:'Card A — Access denied (insufficient privilege)'});
-    renderLog();
-  } else if(card==='B'||card==='C'){
-    // Tech or Engineer — proceed to PIN
-    sysState='MFA_PIN';
-    const roleLabel=card==='B'?'Maintenance Tech':'Plant Engineer';
-    document.getElementById('role-'+card.toLowerCase()+'-status').textContent='SCANNING';
-    document.getElementById('role-'+card.toLowerCase()+'-status').style.color='#56d364';
-    document.getElementById('factor1-val').textContent='VERIFIED ✓';
-    document.getElementById('factor1-val').style.color='#56d364';
-    document.getElementById('factor2-val').textContent='REQUIRED';
-    document.getElementById('factor2-val').style.color='#e3b341';
-    document.getElementById('mfa-stage').textContent=`Card ${card} accepted — Enter PIN (Factor 2)`;
-    document.getElementById('mfa-stage').style.color='#56d364';
-    document.getElementById('auth-msg').textContent=`✓ ${roleLabel} badge verified.\nStep 2: Enter your 4-digit PIN on the keypad, then press ENT.`;
-    document.getElementById('auth-msg').style.color='#58a6ff';
-    document.getElementById('keypad-display').textContent='_ _ _ _';
-    pinBuffer='';
-  }
-}
-
-function showRoleAttempt(card, context){
-  const labels={A:'Line Worker — start/stop motor',B:'Maintenance Tech — normal ops',C:'Plant Engineer — full access'};
-  const colors={A:'#56d364',B:'#58a6ff',C:'#bc8cff'};
-  document.getElementById('last-scan').textContent=`Card ${card} — ${new Date().toLocaleTimeString()}`;
-  document.getElementById('auth-msg').textContent=`Card ${card}: ${labels[card]}\nNo fault active — normal operation permitted.`;
-  document.getElementById('auth-msg').style.color=colors[card];
-}
-
-function kpress(k){
-  if(sysState!=='MFA_PIN'){
-    if(k==='*') pinBuffer='';
-    return;
-  }
-  if(k==='*'){
-    pinBuffer='';
-    document.getElementById('keypad-display').textContent='_ _ _ _';
-    return;
-  }
-  if(k==='#'){
-    // Validate PIN
-    const correctPin=currentRole==='B'?CORRECT_PIN:ENGINEER_PIN;
-    if(pinBuffer===correctPin){
-      authSuccess();
-    } else {
-      authFail();
-    }
-    return;
-  }
-  if(k==='A'||k==='B'||k==='C'||k==='D') return; // ignore mode keys
-  if(pinBuffer.length<4){
-    pinBuffer+=k;
-    document.getElementById('keypad-display').textContent=('●'.repeat(pinBuffer.length)).padEnd(4,'_').split('').join(' ');
-  }
-}
-
-function authSuccess(){
-  sysState='NOMINAL';
-  const ts=new Date().toLocaleTimeString();
-  document.getElementById('factor2-val').textContent='VERIFIED ✓';
-  document.getElementById('factor2-val').style.color='#56d364';
-  document.getElementById('auth-result').textContent='GRANTED ✓';
-  document.getElementById('auth-result').style.color='#56d364';
-  document.getElementById('mfa-stage').textContent='✓ MFA COMPLETE — Resetting grid...';
-  document.getElementById('mfa-stage').style.color='#56d364';
-  document.getElementById('auth-msg').textContent='✅ Both factors verified.\nGrid micro-segmentation lifted. Relay re-engaging motor power.';
-  document.getElementById('auth-msg').style.color='#56d364';
-  faults.unshift({time:ts,msg:'Auth success — Grid reset by Card '+currentRole});
+  faults.unshift(ts+' — RESET OK by Card '+currentCard);
   renderLog();
-  setTimeout(()=>restoreNormal(),1500);
-}
 
-function authFail(){
-  const ts=new Date().toLocaleTimeString();
-  document.getElementById('factor2-val').textContent='FAILED ✗';
-  document.getElementById('factor2-val').style.color='#f85149';
-  document.getElementById('auth-result').textContent='DENIED ✗';
-  document.getElementById('auth-result').style.color='#f85149';
-  document.getElementById('auth-msg').textContent='❌ Incorrect PIN.\nGrid remains locked. Try again or contact supervisor.';
-  document.getElementById('auth-msg').style.color='#f85149';
-  document.getElementById('keypad-display').textContent='ERROR';
-  pinBuffer='';
-  faults.unshift({time:ts,msg:'Auth FAILED — wrong PIN (Card '+currentRole+')'});
-  renderLog();
-  // Reset to MFA_PIN stage for retry
-  setTimeout(()=>{
-    document.getElementById('keypad-display').textContent='_ _ _ _';
-    document.getElementById('factor2-val').textContent='RETRY';
-    document.getElementById('factor2-val').style.color='#e3b341';
-  },1500);
-}
-
-function restoreNormal(){
-  faultType='';rfidScanned=false;currentRole=null;pinBuffer='';
-  document.getElementById('sys-badge').className='badge badge-live';
-  document.getElementById('sys-badge').textContent='● NOMINAL';
-  document.getElementById('relay-val').style.color='#56d364';document.getElementById('relay-val').textContent='CLOSED ●';
-  document.getElementById('motor-val').style.color='#56d364';document.getElementById('motor-val').textContent='RUNNING ▶';
-  document.getElementById('trust-val').style.color='#56d364';document.getElementById('trust-val').textContent='VERIFIED';
-  document.getElementById('seg-val').style.color='#484f58';document.getElementById('seg-val').textContent='INACTIVE';
-  document.getElementById('zta2-status').textContent='STANDBY';
-  document.getElementById('zta2-status').style.color='#58a6ff';
-  document.getElementById('zta2-status').style.background='#58a6ff11';
-  document.getElementById('mfa-stage').textContent='System nominal — no auth required';
-  document.getElementById('mfa-stage').style.color='#e3b341';
-  document.getElementById('factor1-val').textContent='PENDING';document.getElementById('factor1-val').style.color='#484f58';
-  document.getElementById('factor2-val').textContent='PENDING';document.getElementById('factor2-val').style.color='#484f58';
-  document.getElementById('auth-result').textContent='—';document.getElementById('auth-result').style.color='#484f58';
-  document.getElementById('auth-msg').textContent='Scan an RFID card to begin authentication flow.';
-  document.getElementById('auth-msg').style.color='#484f58';
-  document.getElementById('keypad-display').textContent='——';
+  document.getElementById('hbadge').className='hbadge green-b';
+  document.getElementById('hbadge').textContent='● NOMINAL';
+  document.getElementById('sv-relay').textContent='CLOSED'; document.getElementById('sv-relay').style.color='#56d364';
+  document.getElementById('sv-motor').textContent='RUNNING ▶'; document.getElementById('sv-motor').style.color='#56d364';
+  document.getElementById('sv-seg').textContent='INACTIVE'; document.getElementById('sv-seg').style.color='#484f58';
+  document.getElementById('sv-trust').textContent='VERIFIED'; document.getElementById('sv-trust').style.color='#56d364';
+  document.getElementById('mfa-msg').textContent='System nominal — no auth required';
+  document.getElementById('mfa-msg').style.color='#484f58';
   ['a','b','c'].forEach(r=>{
-    document.getElementById('role-'+r).style.borderColor='#21262d';
-    document.getElementById('role-'+r+'-status').textContent='IDLE';
-    document.getElementById('role-'+r+'-status').style.color='#484f58';
+    document.getElementById('r'+r+'-status').textContent='IDLE';
+    document.getElementById('r'+r+'-status').style.color='#484f58';
   });
-  document.getElementById('volt-slider').value=220;
-  document.getElementById('volt-disp').textContent='220V';
-  voltage=220;
+  document.getElementById('predict-card').classList.remove('show');
 }
 
+// ── RFID / MFA ────────────────────────────────────────────────
+function scanCard(c){
+  const ts=new Date().toLocaleTimeString();
+  const labels={A:'Floor Worker',B:'Maint. Tech',C:'Engineer'};
+  const colors={A:'#56d364',B:'#58a6ff',C:'#bc8cff'};
+  const ids={A:'ra',B:'rb',C:'rc'};
+
+  document.getElementById(ids[c]+'-status').textContent='SCANNED';
+  document.getElementById(ids[c]+'-status').style.color=colors[c];
+
+  if(authState==='IDLE'){
+    document.getElementById('mfa-msg').textContent='Card '+c+' ('+labels[c]+') scanned — system nominal, no action needed.';
+    document.getElementById('mfa-msg').style.color=colors[c];
+    return;
+  }
+  if(authState!=='AWAIT_RFID') return;
+
+  currentCard=c;
+  if(c==='A'){
+    document.getElementById('mfa-msg').textContent='🚫 ACCESS DENIED\nCard A has no reset clearance.\nCall maintenance tech.';
+    document.getElementById('mfa-msg').style.color='#f85149';
+    document.getElementById('ra-status').textContent='DENIED';
+    faults.unshift(ts+' — Card A denied (insufficient privilege)');
+    renderLog();
+  } else {
+    authState='AWAIT_PIN';
+    document.getElementById('mfa-msg').textContent='✓ Badge verified (Factor 1)\nType PIN in chat:\n  Card B = 1234 | Card C = 9999';
+    document.getElementById('mfa-msg').style.color='#58a6ff';
+    document.getElementById(ids[c]+'-status').textContent='AWAITING PIN';
+  }
+}
+
+// Allow typing PIN directly in browser for demo
+document.addEventListener('keydown',e=>{
+  if(authState!=='AWAIT_PIN') return;
+  if(e.key>='0'&&e.key<='9'&&pin.length<4) pin+=e.key;
+  if(e.key==='Backspace') pin=pin.slice(0,-1);
+  if(e.key==='Enter'){
+    const correct=currentCard==='B'?'1234':'9999';
+    const ts=new Date().toLocaleTimeString();
+    if(pin===correct){
+      document.getElementById('mfa-msg').textContent='✅ TRUST VERIFIED: JOINT RESET\nBoth factors confirmed.';
+      document.getElementById('mfa-msg').style.color='#56d364';
+      faults.unshift(ts+' — Auth OK by Card '+currentCard);
+      renderLog();
+      setTimeout(()=>restoreJoint(),1500);
+    } else {
+      document.getElementById('mfa-msg').textContent='❌ Wrong PIN — try again';
+      document.getElementById('mfa-msg').style.color='#f85149';
+      pin='';
+    }
+  }
+  document.getElementById('mfa-msg').textContent=
+    authState==='AWAIT_PIN'?`Factor 1 ✓ | PIN: ${'●'.repeat(pin.length).padEnd(4,'_')} (press Enter)`:
+    document.getElementById('mfa-msg').textContent;
+});
+
+// ── LOG ──────────────────────────────────────────────────────
 function renderLog(){
-  if(faults.length===0){document.getElementById('fault-log').textContent='No faults recorded.';return;}
-  document.getElementById('fault-log').innerHTML=faults.slice(0,6).map(f=>`
-    <div class="log-entry">
-      <span class="log-time">${f.time}</span>
-      <span style="color:${f.msg.includes('success')?'#56d364':f.msg.includes('FAILED')||f.msg.includes('denied')?'#e3b341':'#f85149'}">${f.msg}</span>
-    </div>`).join('');
+  if(!faults.length){return;}
+  document.getElementById('log-scroll').innerHTML=faults.slice(0,8).map(f=>`
+    <span class="log-item" style="color:${f.includes('OK')?'#56d364':f.includes('denied')||f.includes('Wrong')?'#e3b341':'#f85149'}">${f}</span>
+  `).join('');
 }
 
-function setVoltage(v){
-  voltage=parseFloat(v);
-  document.getElementById('volt-disp').textContent=Math.round(v)+'V';
-  if(sysState!=='NOMINAL') return;
-  if(voltage>300) triggerFault('OVERLOAD');
-  else if(voltage<140) triggerFault('STALL');
+// ── CONTROLS ─────────────────────────────────────────────────
+function setLoad(v){
+  if(jointDown) return;
+  load=parseFloat(v);
+  document.getElementById('vdisp').textContent=Math.round(v)+'%';
 }
+function simAmber(){ document.getElementById('vslider').value=72; setLoad(72); }
+function simOverload(){ document.getElementById('vslider').value=88; setLoad(88); }
+function simStall(){ document.getElementById('vslider').value=15; setLoad(15); }
+function hardReset(){ load=50; document.getElementById('vslider').value=50; document.getElementById('vdisp').textContent='50%'; restoreJoint(); }
 
-function simSurge(){document.getElementById('volt-slider').value=400;setVoltage(400);}
-function simBrownout(){document.getElementById('volt-slider').value=70;setVoltage(70);}
-function hardReset(){restoreNormal();}
-
-let demoActive=false;
+let demoRunning=false;
 function autoDemo(){
-  if(demoActive) return; demoActive=true;
-  hardReset();
+  if(demoRunning) return; demoRunning=true; hardReset();
   const steps=[
-    [0,    ()=>setVoltage(220)],
-    [2000, ()=>setVoltage(260)],
-    [4000, ()=>{ document.getElementById('volt-slider').value=420; setVoltage(420); }],
-    [6000, ()=>scanCard('A')],   // denied
-    [8000, ()=>scanCard('B')],   // tech scans
-    [10000,()=>{ pinBuffer=''; ['1','2','3','4'].forEach(d=>kpress(d)); kpress('#'); }], // correct PIN
-    [13000,()=>setVoltage(220)],
-    [16000,()=>{ document.getElementById('volt-slider').value=60; setVoltage(60); }],
-    [18000,()=>scanCard('C')],   // engineer
-    [20000,()=>{ pinBuffer=''; ['9','9','9','9'].forEach(d=>kpress(d)); kpress('#'); }],
-    [23000,()=>{ demoActive=false; }],
+    [0,    ()=>setLoad(50)],
+    [2000, ()=>{ document.getElementById('vslider').value=58; setLoad(58); }],
+    [4000, ()=>{ document.getElementById('vslider').value=67; setLoad(67); }], // amber
+    [7000, ()=>{ document.getElementById('vslider').value=74; setLoad(74); }], // deeper amber + predict
+    [10000,()=>{ document.getElementById('vslider').value=85; setLoad(85); }], // FAULT
+    [12000,()=>scanCard('A')],   // denied
+    [14000,()=>scanCard('B')],   // factor 1
+    [16000,()=>{ authState='AWAIT_PIN'; pin='1234'; document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter'})); }],
+    [19000,()=>{ demoRunning=false; }],
   ];
   steps.forEach(([t,fn])=>setTimeout(fn,t));
 }
 
-// ── ANIMATION LOOP ─────────────────────────────────────────────
+// ── ANIMATION LOOP ────────────────────────────────────────────
 function loop(){
+  // Scroll history
   history.shift();
-  const noisy = sysState==='NOMINAL' ? voltage+(Math.random()-0.5)*5 : voltage+(Math.random()-0.5)*3;
-  history.push(noisy);
+  const noisy = jointDown ? load : load + (Math.random()-.5)*2;
+  history.push(Math.max(0,Math.min(100,noisy)));
+
+  // Update load samples for trend
+  loadSamples[sampleIdx%HISTORY]=noisy;
+  sampleIdx++;
+  trend=calcTrend();
+
   updateGauge(noisy);
   drawWave();
+
+  if(!jointDown) applyZone(noisy);
+
   requestAnimationFrame(loop);
 }
 loop();
