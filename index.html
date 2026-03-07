@@ -298,6 +298,11 @@ body{background:#0a0e14;color:#c9d1d9;font-family:'Courier New',monospace;height
   <button class="cbtn amber" onclick="simAmber()">⚠ CAUTION</button>
   <button class="cbtn red"   onclick="simOverload()">🔴 OVERLOAD</button>
   <button class="cbtn red"   onclick="simStall()">📉 STALL</button>
+  <button class="cbtn" onclick="simGearWear()" style="border-color:#e3b341;color:#e3b341">⚙ GEAR WEAR</button>
+  <button class="cbtn" onclick="simVibration()" style="border-color:#bc8cff;color:#bc8cff">〰 VIBRATION</button>
+  <button class="cbtn" onclick="simThermal()" style="border-color:#f85149;color:#f85149">🌡 OVERHEAT</button>
+  <button class="cbtn" onclick="simCableSnag()" style="border-color:#58a6ff;color:#58a6ff">🔌 CABLE SNAG</button>
+  <button class="cbtn" onclick="simUnauthorized()" style="border-color:#f85149;color:#f85149">🚨 INTRUSION</button>
   <button class="cbtn"       onclick="scanCard('A')">🪪 Card A</button>
   <button class="cbtn blue"  onclick="scanCard('B')">🪪 Card B</button>
   <button class="cbtn"       onclick="scanCard('C')" style="border-color:#bc8cff;color:#bc8cff">🪪 Card C</button>
@@ -611,6 +616,104 @@ function autoDemo(){
     [19000,()=>{ demoRunning=false; }],
   ];
   steps.forEach(([t,fn])=>setTimeout(fn,t));
+}
+
+
+// ── SIMULATION SCENARIOS ──────────────────────────────────────
+
+// 1. GEAR WEAR — gradual load creep over time (predictive)
+function simGearWear(){
+  if(demoRunning) return; demoRunning=true; hardReset();
+  let v=50, t=null;
+  document.getElementById('mfa-msg').textContent='SCENARIO: Gear wear — watch load creep up slowly';
+  document.getElementById('mfa-msg').style.color='#bc8cff';
+  // Slowly increase load every 400ms simulating gear degrading
+  t=setInterval(()=>{
+    if(jointDown){clearInterval(t);demoRunning=false;return;}
+    v+=1.2+(Math.random()*0.8);
+    if(v>100) v=100;
+    document.getElementById('vslider').value=Math.round(v);
+    setLoad(v);
+    if(v>=80){clearInterval(t);demoRunning=false;}
+  },400);
+}
+
+// 2. VIBRATION FAULT — erratic load readings (loose joint bolt)
+let vibTimer=null;
+function simVibration(){
+  if(demoRunning) return; demoRunning=true; hardReset();
+  document.getElementById('mfa-msg').textContent='SCENARIO: Loose bolt — erratic load spikes';
+  document.getElementById('mfa-msg').style.color='#bc8cff';
+  let base=52, cycle=0;
+  vibTimer=setInterval(()=>{
+    if(jointDown){clearInterval(vibTimer);demoRunning=false;return;}
+    cycle++;
+    // Random violent spikes simulating vibration
+    const spike = cycle%8===0 ? base+30+(Math.random()*20) : base+(Math.random()-0.5)*8;
+    const v=Math.max(0,Math.min(100,spike));
+    document.getElementById('vslider').value=Math.round(v);
+    setLoad(v);
+  },250);
+}
+
+// 3. THERMAL OVERLOAD — sustained high load causing overheat
+function simThermal(){
+  if(demoRunning) return; demoRunning=true; hardReset();
+  document.getElementById('mfa-msg').textContent='SCENARIO: Thermal overload — sustained high current';
+  document.getElementById('mfa-msg').style.color='#bc8cff';
+  let v=50, phase=0;
+  const t=setInterval(()=>{
+    if(jointDown){clearInterval(t);demoRunning=false;return;}
+    phase++;
+    // Ramps to amber, holds, then tips into red
+    if(phase<10) v+=2;        // ramp up
+    else if(phase<20) v+=0.3; // hold in amber (thermal soak)
+    else v+=3;                // tip into fault
+    v=Math.min(100,v);
+    document.getElementById('vslider').value=Math.round(v);
+    setLoad(v);
+  },500);
+}
+
+// 4. CABLE SNAG — sudden load spike then recovery then spike again
+function simCableSnag(){
+  if(demoRunning) return; demoRunning=true; hardReset();
+  document.getElementById('mfa-msg').textContent='SCENARIO: External cable dragging on joint';
+  document.getElementById('mfa-msg').style.color='#bc8cff';
+  const sequence=[50,52,68,55,71,59,74,57,82]; // Irregular spikes
+  let i=0;
+  const t=setInterval(()=>{
+    if(jointDown||i>=sequence.length){clearInterval(t);demoRunning=false;return;}
+    const v=sequence[i++];
+    document.getElementById('vslider').value=v;
+    setLoad(v);
+  },800);
+}
+
+// 5. UNAUTHORIZED INTRUSION — someone tries to reset without auth
+function simUnauthorized(){
+  if(jointDown) {
+    // Try to bypass — scan wrong card repeatedly
+    document.getElementById('mfa-msg').textContent='🚨 INTRUSION: Unauthorized reset attempt detected!';
+    document.getElementById('mfa-msg').style.color='#f85149';
+    const ts=new Date().toLocaleTimeString();
+    faults.unshift(ts+' — 🚨 INTRUSION: unauthorized reset attempt');
+    renderLog();
+    // Simulate 3 wrong badge scans
+    setTimeout(()=>scanCard('A'),500);
+    setTimeout(()=>scanCard('A'),2000);
+    setTimeout(()=>scanCard('A'),3500);
+    setTimeout(()=>{
+      document.getElementById('mfa-msg').textContent='🔒 3 failed attempts — Supervisor notified. Joint remains locked.';
+      document.getElementById('mfa-msg').style.color='#f85149';
+      faults.unshift(ts+' — LOCKOUT: 3 unauthorized attempts. Alert sent.');
+      renderLog();
+    },4500);
+  } else {
+    // No fault active — show what would happen
+    document.getElementById('mfa-msg').textContent='Trigger a fault first, then try INTRUSION to see lockout';
+    document.getElementById('mfa-msg').style.color='#484f58';
+  }
 }
 
 // ── ANIMATION LOOP ────────────────────────────────────────────
