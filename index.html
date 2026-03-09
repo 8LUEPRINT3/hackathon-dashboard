@@ -198,6 +198,133 @@ body{background:#0d1117;color:#e6edf3;font-family:'Courier New',monospace;displa
 .rul-days{font-size:36px;font-weight:900;font-family:'Courier New',monospace;color:#56d364}
 .rul-unit{font-size:9px;color:#484f58;letter-spacing:1px}
 .rul-date{font-size:9px;color:#e3b341;margin-top:2px}
+
+/* ══════════════════════════════════════════════════════
+   MOBILE OPTIMIZATION — screens ≤ 768px
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Allow full scroll on mobile */
+  body { height: auto; overflow-y: auto; overflow-x: hidden; }
+
+  /* Header */
+  #header { padding: 10px 12px; flex-wrap: wrap; gap: 6px; }
+  #header h1 { font-size: 11px; letter-spacing: 1px; line-height: 1.4; }
+  .hbadge { font-size: 9px; padding: 3px 8px; }
+
+  /* Digital Twin — horizontal scroll on mobile */
+  #twin-bar { padding: 8px 12px; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+  #twin-bar h3 { display: none; } /* save space */
+  .twin-card { min-width: 110px; padding: 8px 10px; }
+  .twin-big { font-size: 24px; }
+  .twin-card h4 { font-size: 7px; }
+  #health-breakdown { min-width: 160px; }
+  .hb-lbl { min-width: 60px; font-size: 7px; }
+  /* Mode toggle — stack vertically */
+  #twin-bar > div:last-child { margin-left: 0; flex-shrink: 0; }
+  #mode-toggle { flex-direction: column; }
+  .mode-btn { font-size: 8px; padding: 5px 10px; }
+  #mode-desc { display: none; }
+
+  /* Hero */
+  #hero { flex-direction: column; align-items: flex-start; padding: 10px 12px; gap: 10px; }
+  #hero-num { font-size: 56px; min-width: unset; letter-spacing: -2px; }
+  .hero-right { width: 100%; }
+  #hero-slider-lbl { font-size: 8px; }
+  .slider-marks { font-size: 7px; }
+  .hero-stats { gap: 16px; }
+  .hstat-val { font-size: 16px; }
+  .hstat-lbl { font-size: 7px; }
+
+  /* ROI bar — horizontal scroll */
+  #roi { padding: 6px 12px; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .roi-s { padding: 2px 10px; }
+  .roi-n { font-size: 13px; }
+  .roi-l { font-size: 7px; }
+
+  /* Main body grid → single column stack */
+  #body {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    height: auto;
+    gap: 1px;
+  }
+
+  /* Gauge panel — horizontal layout on mobile */
+  #gauge-panel {
+    grid-row: unset;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px;
+    align-items: flex-start;
+  }
+  #gauge-wrap { width: 120px; height: 120px; flex-shrink: 0; }
+  #gcanvas { width: 120px !important; height: 120px !important; }
+  #gnum { font-size: 22px; }
+  #gauge-panel > div:last-child { flex: 1; min-width: 120px; }
+
+  /* Wave panel — fixed height on mobile */
+  #wave-panel { height: 160px; }
+  #wcanvas { height: 100%; }
+
+  /* Status + MFA panels */
+  #status-panel, #mfa-panel {
+    grid-column: unset;
+    padding: 10px 12px;
+  }
+  .sr { font-size: 11px; padding: 5px 0; }
+  .srlbl, .srval { font-size: 11px; }
+  .ptitle { font-size: 10px; }
+  #mfa-msg { font-size: 11px; }
+  .rfid-row { font-size: 11px; padding: 5px 0; }
+  .rfid-lbl { font-size: 10px; }
+
+  /* Controls — bigger tap targets */
+  #controls { padding: 10px 12px; gap: 8px; }
+  .cbtn { font-size: 11px; padding: 8px 14px; border-radius: 6px; }
+
+  /* Poka-Yoke checklist — stack steps */
+  #poka-panel { padding: 10px 12px; gap: 6px; }
+  #poka-panel.show { flex-direction: column; align-items: flex-start; }
+  .pstep { font-size: 11px; padding: 8px 12px; width: 100%; }
+  .step-num { width: 22px; height: 22px; font-size: 10px; }
+
+  /* Log bar */
+  #log-bar { padding: 6px 12px; }
+  #log-lbl { font-size: 9px; }
+  .log-item { font-size: 9px; }
+
+  /* Maintenance panel */
+  #maint-panel { padding: 10px 12px; }
+  .maint-grid { grid-template-columns: 1fr; gap: 12px; }
+  .parts-tbl { font-size: 10px; }
+  .parts-tbl th, .parts-tbl td { padding: 5px 4px; }
+
+  /* Report modal */
+  #report-box { width: 95vw; max-height: 85vh; }
+  #report-body { font-size: 11px; padding: 12px; }
+  #report-header h2 { font-size: 11px; }
+  .r-lbl { min-width: 120px; font-size: 10px; }
+  .r-val { font-size: 10px; }
+  .rbtn { font-size: 10px; padding: 8px 14px; }
+
+  /* Prediction card */
+  #predict-msg { font-size: 10px; }
+  #predict-time { font-size: 12px; }
+
+  /* Early warning labels */
+  #ew-watch, #ew-adv, #ew-warn, #ew-crit { font-size: 11px; }
+}
+
+/* Extra small — phones under 420px */
+@media (max-width: 420px) {
+  #header h1 { font-size: 10px; }
+  #hero-num { font-size: 44px; }
+  .twin-card { min-width: 100px; }
+  .cbtn { font-size: 10px; padding: 7px 10px; }
+}
 </style>
 </head>
 <body>
